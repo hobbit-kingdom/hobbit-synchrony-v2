@@ -25,14 +25,17 @@ class Server {
 public:
     Server() : nextClientID(1), isRunning(true) {}
     ~Server() { stop(); }
+
     void start();
     void stop();
 
-    void broadcastMessage(BaseMessage* msg, uint8_t excludeID = 0);
+    void broadcastMessage(const BaseMessage &msg, uint8_t excludeID = 0);
 private:
     SOCKET listeningSocket;
+
     std::vector<ClientHandler*> clients;
     uint8_t nextClientID;
+
     std::mutex clientsMutex;
     bool isRunning;
 
@@ -40,8 +43,8 @@ private:
     void handleClient(ClientHandler* clientHandler);
 
     void notifyClients();
-
 };
 
 
 #endif // SERVER_H
+

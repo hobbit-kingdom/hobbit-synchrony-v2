@@ -1,6 +1,5 @@
 #include "Server.h"
 
-
 void Server::start() {
     // Initialize platform-specific networking
 #ifdef _WIN32
@@ -53,9 +52,10 @@ void Server::acceptClients() {
             }
 
             // Notify the client of its ID
-            ClientIDMessage idMessage(0, clientID);  // 0 as the server sender ID
+            BaseMessage idMessage(CLIENT_ID_MESSAGE, clientID);
             std::vector<uint8_t> buffer;
-            BaseMessage::serializeMessage(&idMessage, buffer);
+
+            BaseMessage::serializeMessage(idMessage, buffer);
 
             uint32_t msgSize = htonl(buffer.size());
             send(clientSocket, (char*)&msgSize, sizeof(msgSize), 0);
@@ -104,7 +104,7 @@ void Server::handleClient(ClientHandler* clientHandler) {
         if (msg) {
             msg->senderID = clientID;
             // Broadcast the message to other clients
-            broadcastMessage(msg, clientID);
+            broadcastMessage(*msg, clientID);
             delete msg;
         }
     }
@@ -114,15 +114,15 @@ void Server::handleClient(ClientHandler* clientHandler) {
         std::lock_guard<std::mutex> lock(clientsMutex);
         clients.erase(std::remove_if(clients.begin(), clients.end(),
             [clientID](ClientHandler* ch) { return ch->clientID == clientID; }), clients.end());
+        notifyClients(); // Notify all clients of the disconnection
     }
 
-    notifyClients(); // Notify all clients of the disconnection
 
     closesocket(clientSocket);
     std::cout << "Client " << (int)clientID << " disconnected.\n";
 }
 
-void Server::broadcastMessage(BaseMessage* msg, uint8_t excludeID) {
+void Server::broadcastMessage(const BaseMessage& msg, uint8_t excludeID) {
     std::vector<uint8_t> buffer;
     BaseMessage::serializeMessage(msg, buffer);
 
@@ -145,12 +145,13 @@ void Server::notifyClients() {
         clientIDs.push_back(clientHandler->clientID);
     }
 
-    // Create a ClientListMessage with the collected client IDs
-    ClientListMessage clientListMessage(0, clientIDs); // Sender ID is set to 0 for server
+    BaseMessage clientListMessage(CLIENT_LIST_MESSAGE, 0); // Sender ID is set to 0 for server
+    for(ClientHandler* clientHandler : clients)
+        clientListMessage.message.push(clientHandler->clientID);
 
     // Serialize the ClientListMessage
     std::vector<uint8_t> buffer;
-    BaseMessage::serializeMessage(&clientListMessage, buffer);
+    BaseMessage::serializeMessage(clientListMessage, buffer);
 
     uint32_t msgSize = htonl(buffer.size());
 

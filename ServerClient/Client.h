@@ -1,3 +1,5 @@
+﻿#pragma once
+
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -6,12 +8,13 @@
 #include <cstring>
 #include <cstdint>
 #include <string>
-#include <limits> // Required for std::numeric_limits
-#include <optional> // Include the optional header
+#include <limits>
+#include <optional>
 #include <set>
-#include <functional> // For std::function
+#include <functional>
+#include <deque>
+#include <cassert>
 
-// Platform-specific includes
 #include "platform-specific.h"
 #include "Message.h"
 
@@ -33,39 +36,54 @@ public:
 
     bool connectToServer(const std::string& serverIP);
     void disconnect();
-    void sendMessage(BaseMessage* msg);
 
-    std::optional<TextMessage> getTextMessage();
-    std::optional<EventMessage> getEventMessage();
+    void updateClientList(const std::queue<uint8_t>& clientIDs);
+    void addListener(std::function<void(const std::queue<uint8_t>&)> listener);
 
-    std::map<uint8_t, SnapshotMessage> getSnapshotMessages();
+    void sendMessage(const BaseMessage& msg);
 
-    void updateClientList(const std::vector<uint8_t>& clientIDs);
-
-    // Function to add a listener
-    void addListener(std::function<void(const std::vector<uint8_t>&)> listener);
-
-    std::vector<uint8_t> connectedClients; // Set of client IDs
-    uint8_t getClientID()
-    {
-        return clientID;
+    BaseMessage frontTextMessage() { 
+        if (textMessages.size() > 0)
+            return textMessages.front();
+        else
+            return BaseMessage(-1, -1);
     }
+    BaseMessage frontEventMessage() {
+        if (eventMessages.size() > 0)
+            return eventMessages.front(); 
+        else
+            return BaseMessage(-1, -1);
+    }
+    std::map<uint8_t, BaseMessage> snapMessage(){ return snapshotMessages; }
+
+
+    void popFrontTextMessage() { textMessages.pop_front(); }
+    void popFrontEventMessage() { eventMessages.pop_front(); }
+    void clearSnapMessage() { snapshotMessages.clear(); }
+   
+
+    uint8_t getClientID() { return clientID; }
+    std::queue<uint8_t> getConnectedClients() { return connectedClients; }
+
 private:
     SOCKET serverSocket;
+
     std::thread receiveThread;
-    bool isConnected;
-    uint8_t clientID;
-
-    std::vector<TextMessage> textMessages;
-    std::vector<EventMessage> eventMessages;
-    std::map<uint8_t, SnapshotMessage> snapshotMessages;
-
     std::mutex messageMutex; // Mutex for thread-safe access to message containers
+
+    bool isConnected;
+
+    uint8_t clientID;
+    std::queue<uint8_t> connectedClients; // Set of client IDs
+
+    std::deque<BaseMessage> textMessages;
+    std::deque<BaseMessage> eventMessages;
+    std::map<uint8_t, BaseMessage> snapshotMessages;
+
 
     void receiveMessages();
     void sortMessageByType(BaseMessage* msg);
 
-    // Member variable for listeners
-    std::vector<std::function<void(const std::vector<uint8_t>&)>> listeners;
+    std::vector<std::function<void(const std::queue<uint8_t>&)>> listeners; // Listeners
 };
 

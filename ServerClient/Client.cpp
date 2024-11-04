@@ -1,5 +1,7 @@
 #include "Client.h"
 
+
+
 int Client::start()
 {
     std::string serverIP;
@@ -12,10 +14,11 @@ int Client::start()
         return 1;
     }
 
-    std::cin.ignore(); // Clear newline character from input buffer
+    std::cin.ignore();
 
     return 0;
 }
+
 int Client::start(std::string serverIP)
 {
     if (!connectToServer(serverIP)) {
@@ -24,8 +27,10 @@ int Client::start(std::string serverIP)
     }
     return 0;
 }
+
 void Client::stop()
 {
+    // Disconnect from the server
     disconnect();
 }
 
@@ -35,170 +40,164 @@ bool Client::connectToServer(const std::string& serverIP) {
     WSAStartup(MAKEWORD(2, 2), &wsData);
 #endif
 
+    // Create a socket for the connection
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == INVALID_SOCKET) {
         std::cerr << "Error creating socket.\n";
-        return false;
+        return false; // Socket creation failed
     }
 
+    // Set up server address structure
     sockaddr_in serverHint{};
     serverHint.sin_family = AF_INET;
     serverHint.sin_port = htons(PORT);
-    inet_pton(AF_INET, serverIP.c_str(), &serverHint.sin_addr);
+    inet_pton(AF_INET, serverIP.c_str(), &serverHint.sin_addr); // Correctly convert IP string to address
 
+    // Attempt to connect to the server
     if (connect(serverSocket, (sockaddr*)&serverHint, sizeof(serverHint)) == SOCKET_ERROR) {
         std::cerr << "Cannot connect to server.\n";
-        return false;
+        return false; // Connection failed
     }
 
-    isConnected = true;
+    isConnected = true; // Mark as connected
 
-    // Start receive thread
+    // Start a thread to receive messages
     receiveThread = std::thread(&Client::receiveMessages, this);
-    receiveThread.detach();
+    receiveThread.detach(); // Detach the thread
 
     std::cout << "Connected to server.\n";
 
-    return true;
+    return true; // Connection successful
 }
-
 void Client::disconnect() {
-    isConnected = false;
-    closesocket(serverSocket);
+    isConnected = false; // Mark as disconnected
+
+    if (receiveThread.joinable())
+        receiveThread.join(); // Join the thread
+    else
+        return;
+    closesocket(serverSocket); // Close the socket
 #ifdef _WIN32
-    WSACleanup();
+    WSACleanup(); // Clean up Winsock on Windows
 #endif
 }
 
-void Client::sendMessage(BaseMessage* msg) {
-    std::vector<uint8_t> buffer;
-    BaseMessage::serializeMessage(msg, buffer);
-
-    uint32_t msgSize = htonl(buffer.size());
-
-    send(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
-    send(serverSocket, (char*)buffer.data(), buffer.size(), 0);
-}
 
 void Client::receiveMessages() {
     while (isConnected) {
         uint32_t msgSize;
+
+        // Receive message size
         int bytesReceived = recv(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
         if (bytesReceived <= 0) {
-            break;
+            break; // Exit loop if no bytes received
         }
-        msgSize = ntohl(msgSize);
+        msgSize = ntohl(msgSize); // Convert size back to host byte order
 
         std::vector<uint8_t> buffer(msgSize);
         size_t totalReceived = 0;
+
+        // Receive the entire message
         while (totalReceived < msgSize) {
             bytesReceived = recv(serverSocket, (char*)buffer.data() + totalReceived, msgSize - totalReceived, 0);
             if (bytesReceived <= 0) {
-                break;
+                break; // Exit if no bytes received
             }
-            totalReceived += bytesReceived;
+            totalReceived += bytesReceived; // Update total received
         }
         if (bytesReceived <= 0) {
-            break;
+            break; // Exit if no bytes received
         }
 
-
+        // Deserialize the message
         BaseMessage* msg = BaseMessage::deserializeMessage(buffer);
         if (msg) {
+
             if (msg->messageType == CLIENT_LIST_MESSAGE) { // Handle client list update
-                ClientListMessage* clm = static_cast<ClientListMessage*>(msg);
-                updateClientList(clm->clientIDs); // Update client list
+                BaseMessage* clm = static_cast<BaseMessage*>(msg);
+                updateClientList(clm->message);
             }
             else {
-                sortMessageByType(msg);
+                sortMessageByType(msg); // Sort other message types
             }
             delete msg;
         }
     }
 
-    disconnect();
+    disconnect(); // Ensure disconnection on exit
+}
+void Client::sendMessage(const BaseMessage& msg) {
+    std::vector<uint8_t> buffer;
+    BaseMessage::serializeMessage(msg, buffer); // Serialize the message
+
+    uint32_t msgSize = htonl(buffer.size()); // Convert size to network byte order
+
+    // Send message size and message data
+    send(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
+    send(serverSocket, (char*)buffer.data(), buffer.size(), 0);
 }
 
 void Client::sortMessageByType(BaseMessage* msg) {
     std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread safety
 
+    // Sort messages based on their type
     switch (msg->messageType) {
     case TEXT_MESSAGE: {
-        TextMessage* tm = static_cast<TextMessage*>(msg);
-        textMessages.push_back(*tm);
+        BaseMessage* tm = static_cast<BaseMessage*>(msg);
+        textMessages.push_back(*tm); // Store text message
         break;
     }
     case EVENT_MESSAGE: {
-        EventMessage* em = static_cast<EventMessage*>(msg);
-        eventMessages.push_back(*em);
+        BaseMessage* em = static_cast<BaseMessage*>(msg);
+        eventMessages.push_back(*em); // Store event message
         break;
     }
     case SNAPSHOT_MESSAGE: {
-        SnapshotMessage* sm = static_cast<SnapshotMessage*>(msg);
-        snapshotMessages[sm->senderID] = *sm;
+        BaseMessage* sm = static_cast<BaseMessage*>(msg);
+        snapshotMessages[sm->senderID] = *sm; // Store snapshot message by sender ID
         break;
     }
     case CLIENT_LIST_MESSAGE: {
-        ClientListMessage* cl = static_cast<ClientListMessage*>(msg);
-        updateClientList(cl->clientIDs);
+        BaseMessage* cl = static_cast<BaseMessage*>(msg);
+        updateClientList(cl->message); // Update client list with new IDs
         break;
     }
     case CLIENT_ID_MESSAGE: {
-        ClientIDMessage* idMsg = static_cast<ClientIDMessage*>(msg);
-        clientID = idMsg->clientID;
-        std::cout << "Assigned client ID: " << (int)clientID << std::endl;
+        BaseMessage* idMsg = static_cast<BaseMessage*>(msg);
+        clientID = idMsg->senderID; // Store assigned client ID
+        std::cout << "Assigned client ID: " << (int)clientID << std::endl; // Output assigned ID
         break;
     }
     }
 }
 
-// Functions to get messages
-std::optional<TextMessage> Client::getTextMessage() {
-    std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread-safe access
-    if (textMessages.empty()) {
-        return std::nullopt; // Return an empty optional if no messages
-    }
-    TextMessage message = std::move(textMessages.front()); // Get the first element
-    textMessages.erase(textMessages.begin()); // Remove the first element
-    return message; // Return the message
-}
+void Client::updateClientList(const std::queue<uint8_t>& clientIDs) {
+    std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread safety
 
-std::optional<EventMessage> Client::getEventMessage() {
-    std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread-safe access
-    if (eventMessages.empty()) {
-        return std::nullopt; // Return an empty optional if no events
-    }
-    EventMessage event = std::move(eventMessages.front()); // Get the first element
-    eventMessages.erase(eventMessages.begin()); // Remove the first element
-    return event; // Return the event
-}
+    // Clear the existing connected clients queue
+    connectedClients = std::queue<uint8_t>();
 
-// Modified function to return and delete all snapshots
-std::map<uint8_t, SnapshotMessage> Client::getSnapshotMessages() {
-    std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread-safe access
-    std::map<uint8_t, SnapshotMessage> snapshots = std::move(snapshotMessages); // Move the map to a local variable
-    snapshotMessages.clear(); // Clear the original map to delete the snapshots
-    return snapshots; // Return the moved snapshots
-}
-
-void Client::updateClientList(const std::vector<uint8_t>& clientIDs) {
-    std::lock_guard<std::mutex> lock(messageMutex);
-
-
-    connectedClients = std::vector<uint8_t>(clientIDs.begin(), clientIDs.end()); // Update the set with new data
-    std::cout << "*Client List Updated*" << std::endl;
-    std::cout << "*New List: " << std::endl;
-    for (auto e : connectedClients)
-    {
-        std::cout << std::to_string(e) << std::endl;
+    // Update the connected clients list with new data
+    std::queue<uint8_t> tempQueue = clientIDs; // Create a copy of the input queue
+    while (!tempQueue.empty()) {
+        connectedClients.push(tempQueue.front()); // Add each client ID to the connected clients queue
+        std::cout << std::to_string(tempQueue.front()) << std::endl; // Output each client ID
+        tempQueue.pop(); // Remove the processed client ID
     }
 
     // Notify all listeners about the updated client list
     for (const auto& listener : listeners) {
-        listener(clientIDs);
+        // Convert the queue to a vector for passing to the listener
+        std::queue<uint8_t> clientIDVector;
+        std::queue<uint8_t> tempForListener = connectedClients; // Create a copy for the listener
+        while (!tempForListener.empty()) {
+            clientIDVector.push(tempForListener.front());
+            tempForListener.pop();
+        }
+        listener(clientIDVector); // Call each listener with the updated client IDs
     }
 }
 
-void Client::addListener(std::function<void(const std::vector<uint8_t>&)> listener) {
-    listeners.push_back(listener);
+void Client::addListener(std::function<void(const std::queue<uint8_t>&)> listener) {
+    listeners.push_back(listener); // Add a new listener to the list
 }
