@@ -210,14 +210,13 @@ private:
 	// Sets animation pointer of the NPC
 	void setAnimationPtr()
 	{
-		// store object pointer
-		uint32_t ObjectPtr = getObjectPtr();
-
 		// set animation pointer
-		uint32_t animAdd1 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + ObjectPtr, 4);
-		uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd1, 4);
-		uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd2, 4);
-		animationAddress = 0x8 + animAdd3;
+		uint32_t animAdd1 = getObjectPtr();
+		uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + animAdd1, 4);
+		uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd2, 4);
+		uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3, 4);
+		animationAddress = 0x8 + animAdd4;
+
 
 		// Display the animation pointer Data
 		std::cout << std::hex;

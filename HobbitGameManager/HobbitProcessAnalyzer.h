@@ -8,13 +8,14 @@
 #include <Windows.h>
 #endif
 #include<unordered_map>
-
+#include <iomanip>
 #include"ProcessAnalyzerTypeWrapped.h"
 class HobbitProcessAnalyzer : public ProcessAnalyzerTypeWrapped
 {
 public:
 	HobbitProcessAnalyzer()
 	{
+		hobbitProcess = nullptr;
 		hobbitProcess = getProcess("Meridian.exe");
 		objectStackAddress = 0;
 		if (hobbitProcess != nullptr)
@@ -55,6 +56,7 @@ public:
 
 		// Use the base class writeData function to perform the memory write
 		ProcessAnalyzer::writeData(hobbitProcess, reinterpret_cast<LPVOID>(address), byteData);
+		return;
 	}
 	// Write a vector of data to the specified memory address in hobbitProcess
 	template <typename T>
@@ -91,10 +93,10 @@ public:
 			return 0;
 		}
 
-		static const size_t stackSize = 0xEFEC;
+		static const size_t stackSize = 0x16B30;
 		static const size_t jumpSize = 0x14;
 
-		for (size_t offset = stackSize; offset > 0; offset -= jumpSize)
+		for (size_t offset = 0; offset <= stackSize; offset += jumpSize)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 

@@ -17,167 +17,13 @@
 #include <iostream>
 #include <iomanip>
 
-#include "MessageProcessing.h"
 #include "../ServerClient/Client.h"
 #include "../HobbitGameManager/HobbitGameManager.h"
 #include "../HobbitGameManager/NPC.h"
 
-// Utility functions for handling serialization and deserialization
-template <typename T>
-T convertQueueToType(std::queue<uint8_t>& myQueue) {
-    if (myQueue.size() < sizeof(T)) {
-        throw std::runtime_error("Not enough elements in the queue");
-    }
-
-    T result;
-    std::vector<uint8_t> buffer(sizeof(T));
-    for (size_t i = 0; i < sizeof(T); ++i) {
-        buffer[i] = myQueue.front();
-        myQueue.pop();
-    }
-
-    std::memcpy(&result, buffer.data(), sizeof(T));
-    return result;
-}
-
-template <typename T>
-void pushTypeToVector(const T& value, std::vector<uint8_t>& myVector) {
-    const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&value);
-    myVector.insert(myVector.end(), bytes, bytes + sizeof(T));
-}
-
-// Enum for data labels
-enum class DataLabel {
-    SERVER = 0,
-    CONNECTED_PLAYER_SNAP = 1,
-    CONNECTED_PLAYER_LEVEL = 2
-};
-
-// Structs for message handling
-struct MessageBundle {
-    BaseMessage* textResponse = nullptr;
-    BaseMessage* eventResponse = nullptr;
-    BaseMessage* snapshotResponse = nullptr;
-};
-
-struct Vector3 {
-    float x = 0.0f, y = 0.0f, z = 0.0f;
-
-    Vector3() = default;
-    Vector3(const Vector3& vec) : x(vec.x), y(vec.y), z(vec.z) {}
-
-    Vector3& operator=(const Vector3& vec) {
-        x = vec.x; y = vec.y; z = vec.z;
-        return *this;
-    }
-
-    Vector3& operator+=(const Vector3& vec) {
-        x += vec.x; y += vec.y; z += vec.z;
-        return *this;
-    }
-
-    Vector3& operator-=(const Vector3& vec) {
-        x -= vec.x; y -= vec.y; z -= vec.z;
-        return *this;
-    }
-};
-
-// Player classes
-class ConnectedPlayer {
-    uint32_t animation;
-    Vector3 position, rotation;
-
-    uint32_t level;
-public:
-    int id = -1;
-    NPC npc;
-    void readConectedPlayerSnap(std::queue<uint8_t>& gameData) {
-        animation = convertQueueToType<uint32_t>(gameData);
-        position.x = convertQueueToType<float>(gameData);
-        position.y = convertQueueToType<float>(gameData);
-        position.z = convertQueueToType<float>(gameData);
-        rotation.y = convertQueueToType<float>(gameData);
-    }
-    void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
-    {
-        level = convertQueueToType<uint32_t>(gameData);
-    }
-
-    void processPlayer(uint8_t myId)
-    {
-        if (id == -1 || id == myId)
-            return;
-       //set position, rotation, and animation
-        npc.setPositionX(position.x);
-        npc.setPositionY(position.y);
-        npc.setPositionZ(position.z);
-        npc.setRotationY(rotation.y);
-        npc.setAnimation(animation);
-
-        // Display the data
-        std::cout << "\033[33m";
-        std::cout << "Recieve the packet Send: " << std::endl;
-        std::cout << "X: " << position.x << " || ";
-        std::cout << "Y: " << position.y << " || ";
-        std::cout << "Z: " << position.z << " || ";
-        std::cout << "R: " << rotation.y << " || ";
-        std::cout << "A: " << animation << std::endl << std::endl;
-        std::cout << "\033[0m";
-    }
-    void clear() { id = -1; }
-};
-class MainPlayer {
-    HobbitProcessAnalyzer *hobbitProcessAnalyzer;
-    uint32_t animation;
-    Vector3 position, rotation;
-    
-    uint32_t level;
-    uint32_t newLevel;
-
-    uint32_t bilboPosXPTR;
-    uint32_t bilboAnimPTR;
-    const uint32_t X_POSITION_PTR = 0x0075BA3C;
-    std::atomic<bool> processPackets;
-
-public:
-    void readPlayer(std::queue<uint8_t>& gameData)
-    {
-        newLevel = convertQueueToType<uint32_t>(gameData);
-    }
-    std::vector<uint8_t> write() {
-        // label - Snap, 0 - reserve for size
-        std::vector<uint8_t> data = { static_cast<uint8_t>(DataLabel::CONNECTED_PLAYER_SNAP), 0 };
-
-        // Prepares packets to send
-        position.x = hobbitProcessAnalyzer->readData<float>(0x7C4 + bilboPosXPTR, 4);
-        position.y = hobbitProcessAnalyzer->readData<float>(0x7C8 + bilboPosXPTR, 4);
-        position.z = hobbitProcessAnalyzer->readData<float>(0x7CC + bilboPosXPTR, 4);
-        rotation.y = hobbitProcessAnalyzer->readData<float>(0x7AC + bilboPosXPTR, 4);
-        uint32_t animBilbo = hobbitProcessAnalyzer->readData<uint32_t>(bilboAnimPTR, 4);
-
-        pushTypeToVector(animation, data);
-        data[1] += sizeof(animation);
-
-        pushTypeToVector(position.x, data);
-        pushTypeToVector(position.y, data);
-        pushTypeToVector(position.z, data);
-        data[1] += sizeof(position);
-
-        pushTypeToVector(rotation.y, data);
-        data[1] += sizeof(rotation.y);
-
-        return data;
-    }
-
-    void setHobbitProcessAnalyzer(HobbitProcessAnalyzer* newHobbitProcessAnalyzer)
-    {
-        hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
-    }
-    void readPtrs() {
-        bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR, 4);
-        bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR, 4), 4);
-    }
-};
+#include "Utility.h"
+#include "MainPlayer.h"
+#include "ConnectedPlayer.h"
 
 // Main client class
 class HobbitClient {
@@ -185,105 +31,44 @@ public:
     HobbitClient(std::string initialServerIp = "")
         : serverIp(std::move(initialServerIp)), running(false), processMessages(false) {
     }
-
     ~HobbitClient() { stop(); }
 
     int start();
     int start(const std::string& ip);
     void stop();
-
 private:
     Client client;
     HobbitGameManager hobbitGameManager;
+
     std::vector<uint64_t> guids;
+
     std::string serverIp;
-    std::atomic<bool> running;
-    std::atomic<bool> processMessages;
+
+
     std::thread updateThread;
+    std::atomic<bool> running;
+    std::atomic<bool> processMessages = false;
+
 
     static constexpr int MAX_PLAYERS = 7;
     ConnectedPlayer connectedPlayer[MAX_PLAYERS];
+
     MainPlayer mainPlayer;
     
     void update();
     void readMessage();
+    void readGameMessage(int senderID, std::queue<uint8_t>& gameData);
     void writeMessage();
-    void processGameData(int senderID, std::queue<uint8_t>& gameData);
-    MessageBundle createMessages();
-
-    void onEnterNewLevel() { 
-        processMessages = true;    
-
-        mainPlayer.readPtrs(); 
-
-        for (int i = 0; i < MAX_PLAYERS; ++i)
-        {
-            connectedPlayer[i].npc.setNCP(guids[i], hobbitGameManager.getHobbitProcessAnalyzer());
-        }
-    }
+    
+    void onEnterNewLevel();
     void onExitLevel() { processMessages = false; }
-    void onOpenGame() 
-    { 
-        processMessages = false; 
 
-        mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
-        mainPlayer.readPtrs();
+    void onOpenGame();
+    void onCloseGame() { processMessages = false; }
 
-        guids = getPlayersNpcGuid();
-        for (int i = 0; i < MAX_PLAYERS; ++i)
-        {
-            connectedPlayer[i].npc.setNCP(guids[i], hobbitGameManager.getHobbitProcessAnalyzer());
-        }
-    }
-    void onCloseGame() { /* Add closing game logic here if needed */ }
+    void onClientListUpdate(const std::queue<uint8_t>&);
 
-    void onClientListUpdate(const std::vector<uint8_t>&) {
-        for (int i = 0; i < MAX_PLAYERS; ++i) {
-            connectedPlayer[i].id = (i < client.connectedClients.size()) ? client.connectedClients[i] : -1;
-        }
-    }
-
-    std::vector<uint64_t> getPlayersNpcGuid() {
-        std::ifstream file;
-        std::string filePath = "FAKE_BILBO_GUID.txt";
-
-        // Open the file, prompting the user if it doesn't exist
-        while (!file.is_open()) {
-            file.open(filePath);
-            if (!file.is_open()) {
-                std::cout << "File not found. Enter the path to FAKE_BILBO_GUID.txt or 'q' to quit: ";
-                std::string input;
-                std::getline(std::cin, input);
-                if (input == "q") return {}; // Quit if user enters 'q'
-                filePath = input;
-            }
-        }
-
-        std::vector<uint64_t> tempGUID;
-        std::string line;
-
-        // Read each line from the file
-        while (std::getline(file, line)) {
-            // Find the position of the underscore
-            size_t underscorePos = line.find('_');
-            if (underscorePos != std::string::npos) {
-                // Split the line into two parts
-                std::string part2 = line.substr(0, underscorePos); // Before the underscore
-                std::string part1 = line.substr(underscorePos + 1); // After the underscore
-
-                // Concatenate the parts in reverse order
-                std::string combined = part2 + part1;
-
-                // Convert the combined string to uint64_t
-                uint64_t guid = std::stoull(combined, nullptr, 16); // Convert from hex string to uint64_t
-                tempGUID.push_back(guid);
-            }
-        }
-
-        std::cout << "FOUND FILE!" << std::endl;
-        return tempGUID;
-    }
-
+    std::vector<uint64_t> getPlayersNpcGuid();
 };
 
 int HobbitClient::start() {
@@ -296,7 +81,7 @@ int HobbitClient::start() {
 int HobbitClient::start(const std::string& ip) {
     serverIp = ip;
 
-    client.addListener([this](const std::vector<uint8_t>& clientIDs) {
+    client.addListener([this](const std::queue<uint8_t>& clientIDs) {
         onClientListUpdate(clientIDs);
         });
 
@@ -304,16 +89,16 @@ int HobbitClient::start(const std::string& ip) {
 
     while (!hobbitGameManager.isGameRunning()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << "Please open The Hobbit 2003 game!" << std::endl;
+        std::cout << "You must open The Hobbit 2003 game!" << std::endl;
     }
-
-   
 
     running = true;
     hobbitGameManager.addListenerEnterNewLevel([this] { onEnterNewLevel(); });
     hobbitGameManager.addListenerExitLevel([this] { onExitLevel(); });
     hobbitGameManager.addListenerOpenGame([this] { onOpenGame(); });
     hobbitGameManager.addListenerCloseGame([this] { onCloseGame(); });
+
+    hobbitGameManager.start();
 
     onOpenGame();
     updateThread = std::thread(&HobbitClient::update, this);
@@ -329,7 +114,12 @@ void HobbitClient::stop() {
     }
 }
 void HobbitClient::update() {
-    while (running) {
+    while (running ){
+        if (!hobbitGameManager.isOnLevel() || !processMessages)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            continue;
+        }
         readMessage();
         for (int i = 0; i < MAX_PLAYERS; ++i)
         {
@@ -341,47 +131,52 @@ void HobbitClient::update() {
 }
 
 void HobbitClient::readMessage() {
-    if (auto textMessageOpt = client.getTextMessage()) {
-        std::cout << "Received Text Message from " << int(textMessageOpt->senderID) << ": "
-            << std::string(textMessageOpt->text.begin(), textMessageOpt->text.end()) << std::endl;
+
+    BaseMessage textMessageOpt = client.frontTextMessage();
+    if (textMessageOpt.message.size() > 0) {
+        std::cout << "Received Text Message from " << int(textMessageOpt.senderID) << ": ";
+        // Assuming textMessageOpt.message is a queue of characters or strings
+        std::string fullMessage;
+        while (!textMessageOpt.message.empty()) {
+            fullMessage += textMessageOpt.message.front(); // Get the front message
+            textMessageOpt.message.pop(); // Remove the front message from the queue
+        }
+
+        std::cout << fullMessage << std::endl;
+
+        client.popFrontTextMessage();
     }
 
-    if (auto eventMessageOpt = client.getEventMessage()) {
-        processGameData(eventMessageOpt->senderID, eventMessageOpt->eventData);
+    BaseMessage eventMessageOpt = client.frontEventMessage();
+    if (eventMessageOpt.message.size() > 0) {
+        readGameMessage(eventMessageOpt.senderID, eventMessageOpt.message);
+        client.popFrontEventMessage();
     }
 
-    for (auto& [clientID, snapshotMsg] : client.getSnapshotMessages()) {
-        processGameData(clientID, snapshotMsg.snapshotData);
+    std::map<uint8_t, BaseMessage> snapshotMessages = client.snapMessage();
+    for (auto& pair : snapshotMessages) {
+        readGameMessage(pair.first, pair.second.message);
+        client.clearSnapMessage();
     }
+
 }
 void HobbitClient::writeMessage() {
-    MessageBundle messages = createMessages();
-
-    if (messages.textResponse) client.sendMessage(messages.textResponse);
-    if (messages.eventResponse) client.sendMessage(messages.eventResponse);
-    if (messages.snapshotResponse) client.sendMessage(messages.snapshotResponse);
-
-    delete messages.textResponse;
-    delete messages.eventResponse;
-    delete messages.snapshotResponse;
+    BaseMessage snap(SNAPSHOT_MESSAGE, client.getClientID());
+    snap.message = mainPlayer.write();
+    if (snap.message.size()>0) client.sendMessage(snap);
 }
-
-void HobbitClient::processGameData(int senderID, std::queue<uint8_t>& gameData) {
+void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) {
     std::cout << "Received Message from client " << senderID << std::endl;
-    
+
     while (!gameData.empty()) {
         DataLabel label = static_cast<DataLabel>(gameData.front());
         gameData.pop();
 
-        int size_tmp = gameData.front();
+        uint8_t size_tmp = gameData.front();
         gameData.pop();
-        if (label == DataLabel::SERVER)
-        {
 
-        }
-        else if(label == DataLabel::CONNECTED_PLAYER_SNAP)
+        if (label == DataLabel::CONNECTED_PLAYER_SNAP)
         {
-       
             auto it = std::find_if(std::begin(connectedPlayer), std::end(connectedPlayer),
                 [&](const ConnectedPlayer& p) { return p.id == senderID; });
             if (it != std::end(connectedPlayer)) {
@@ -412,20 +207,87 @@ void HobbitClient::processGameData(int senderID, std::queue<uint8_t>& gameData) 
     }
 }
 
-MessageBundle HobbitClient::createMessages() {
-    static int counter = 0;
-    ++counter;
 
-    std::vector<uint8_t> dataSnapshot = mainPlayer.write();
-    //label = Level, size = 3, data 3 times
-    //std::vector<uint8_t> dataSnapshot = { static_cast<uint8_t>(DataLabel::CONNECTED_PLAYER), 3,
-    //                                      static_cast<uint8_t>(counter),
-    //                                      static_cast<uint8_t>(counter * 2),
-    //                                      static_cast<uint8_t>(counter + 30) };
+void HobbitClient::onEnterNewLevel() {
 
-    MessageBundle messages;
-    messages.textResponse = nullptr;
-    messages.eventResponse = nullptr;
-    messages.snapshotResponse = new EventMessage(0, dataSnapshot);
-    return messages;
+    hobbitGameManager.getHobbitProcessAnalyzer()->startAnalyzingProcess();
+    mainPlayer.readPtrs();
+    if (guids.size() == 0)
+        guids = getPlayersNpcGuid();
+    for (int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        connectedPlayer[i].npc.setNCP(guids[i], hobbitGameManager.getHobbitProcessAnalyzer());
+    }
+    processMessages = true;
+
 }
+void HobbitClient::onOpenGame()
+{
+    processMessages = false;
+    mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+    ConnectedPlayer::setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+    if (hobbitGameManager.isOnLevel())
+    {
+
+        mainPlayer.readPtrs();
+        guids = getPlayersNpcGuid();
+        for (int i = 0; i < MAX_PLAYERS; ++i)
+        {
+            connectedPlayer[i].npc.setNCP(guids[i], hobbitGameManager.getHobbitProcessAnalyzer());
+        }
+        processMessages = true;
+
+    }
+
+}
+
+
+void HobbitClient::onClientListUpdate(const std::queue<uint8_t>&) {
+    std::queue<uint8_t> connectedClients = client.getConnectedClients();
+    for (int i = 0; i < MAX_PLAYERS; ++i) {
+        connectedPlayer[i].id = connectedClients.empty() ? -1 : connectedClients.front();
+        if (!connectedClients.empty()) connectedClients.pop(); // Remove the front element from the queue
+    }
+}
+std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
+    std::ifstream file;
+    std::string filePath = "FAKE_BILBO_GUID.txt";
+
+    // Open the file, prompting the user if it doesn't exist
+    while (!file.is_open()) {
+        file.open(filePath);
+        if (!file.is_open()) {
+            std::cout << "File not found. Enter the path to FAKE_BILBO_GUID.txt or 'q' to quit: ";
+            std::string input;
+            std::getline(std::cin, input);
+            if (input == "q") return {}; // Quit if user enters 'q'
+            filePath = input;
+        }
+    }
+
+    std::vector<uint64_t> tempGUID;
+    std::string line;
+
+    // Read each line from the file
+    while (std::getline(file, line)) {
+        // Find the position of the underscore
+        size_t underscorePos = line.find('_');
+        if (underscorePos != std::string::npos) {
+            // Split the line into two parts
+            std::string part2 = line.substr(0, underscorePos); // Before the underscore
+            std::string part1 = line.substr(underscorePos + 1); // After the underscore
+
+            // Concatenate the parts in reverse order
+            std::string combined = part2 + part1;
+
+            // Convert the combined string to uint64_t
+            uint64_t guid = std::stoull(combined, nullptr, 16); // Convert from hex string to uint64_t
+            tempGUID.push_back(guid);
+        }
+    }
+
+    std::cout << "FOUND FILE!" << std::endl;
+    return tempGUID;
+}
+
+

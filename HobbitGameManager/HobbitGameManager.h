@@ -19,12 +19,6 @@ private:
     std::atomic<bool> stopThread;
     // All derived classes
 
-    // in game states
-    uint32_t gameState;
-    bool levelLoaded;
-    bool levelFullyLoaded;
-    uint32_t currentLevel;
-
     // events
     std::vector<Listener> listenersEnterNewLevel;
     std::vector<Listener> listenersExitLevel;
@@ -68,101 +62,80 @@ private:
 
     }
 
-    uint32_t getGameState()
-    {
-        return gameState;
-    }
-    bool getLevelLoaded()
-    {
-        return levelLoaded;
-    }
-    bool getLevelFullyLoaded()
-    {
-        return levelFullyLoaded;
-    }
-    uint32_t getGameLevel()
-    {
-        return currentLevel;
-    }
+ 
+   
+    std::atomic<bool> wasHobbitOpen = false;
+    std::atomic<bool> isHobbitOpen = false;
 
-    void readInstanices()
-    {
-        gameState = hobitProcessAnalyzer.readData<uint32_t>(0x00762B58, sizeof(uint32_t)); // 0x00762B58: game state address
-        currentLevel = hobitProcessAnalyzer.readData<uint32_t>(0x00762B5C, sizeof(uint32_t));  // 00762B5C: current level address
-        levelLoaded = hobitProcessAnalyzer.readData<bool>(0x00760354, sizeof(uint32_t));  //0x0072C7D4: is loaded level address
-        levelFullyLoaded = !hobitProcessAnalyzer.readData<bool>(0x00760354, sizeof(uint32_t));  //0x0072C7D4: is loaded level address
-    }
+    std::atomic<uint32_t> previousState = -1;
+    std::atomic<uint32_t> currentState = -1;
 
+    std::atomic<uint32_t> previousLevel = -1;
+    std::atomic<uint32_t> currentLevel = -1;
 
-    void start()
-    {
-        hobitProcessAnalyzer.startAnalyzingProcess();
-    }
+    std::atomic<bool> wasLevelLoaded = false;
+    std::atomic<bool> isLevelLoaded = false;
     void update()
     {
-        bool wasHobbitOpen = false;
-        bool isHobbitOpen = false;
-
-        uint32_t previousState = -1;
-        uint32_t currentState = -1;
-
-        bool previousLevelLoaded = false;
-        bool currentLevelLoaded = false;
-
-        bool previousLevelFullyLoaded = false;
-        bool currentLevelFullyLoaded = false;
         while (!stopThread)
         {
-            // update speed
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            updateLoop();
+        }
+    }
+    void updateLoop()
+    {
+        // update speed
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
-            // check if game open
-            isHobbitOpen = hobitProcessAnalyzer.isGameRunning();
-            if (!isHobbitOpen)
+        // check if game open
+        isHobbitOpen = hobitProcessAnalyzer.isGameRunning();
+        if (!isHobbitOpen)
+        {
+            if (isHobbitOpen != wasHobbitOpen)
             {
-                if (isHobbitOpen != wasHobbitOpen)
-                {
-                    eventCloseGame();
-                    std::cout << "Waiting for HobbitTM to be opened..." << std::endl;
-                }
-                wasHobbitOpen = isHobbitOpen;
-                continue;
+                eventCloseGame();
+                std::cout << "Waiting for HobbitTM to be opened..." << std::endl;
             }
-            if (wasHobbitOpen)
-            {
-                eventOpenGame();
-                wasHobbitOpen = isHobbitOpen;
-            }
-
-            // read instances of game (current level, etc.)
-            readInstanices();
-
-            // handle game states
-            // game state
-            currentState = getGameState();
-
-            // level loaded
-            currentLevelLoaded = getLevelLoaded();
-            currentLevelFullyLoaded = getLevelFullyLoaded();
-
-            // new level
-            if (previousLevelFullyLoaded != currentLevelFullyLoaded && currentLevelFullyLoaded)
-            {
-                eventEnterNewLevel();
-            }
-            if (previousLevelLoaded != currentLevelLoaded && !currentLevelLoaded)
-            {
-                eventExitLevel();
-            }
-
-            previousState = currentState;
-            previousLevelLoaded = currentLevelLoaded;
-            previousLevelFullyLoaded = currentLevelFullyLoaded;
+            wasHobbitOpen = !!isHobbitOpen;
+            return;
+        }
+        if (wasHobbitOpen)
+        {
+            eventOpenGame();
+            wasHobbitOpen = !!isHobbitOpen;
         }
 
+        // read instances of game (current level, etc.)
+        currentState = hobitProcessAnalyzer.readData<uint32_t>(0x00762B58, sizeof(uint32_t)); // 0x00762B58: game state address
+        currentLevel = hobitProcessAnalyzer.readData<uint32_t>(0x00762B5C, sizeof(uint32_t));  // 0x00762B5C: current level address
+        isLevelLoaded = hobitProcessAnalyzer.readData<bool>(0x00760354, sizeof(uint32_t));  //0x00760354: is loaded level address
+        //isLevelLoaded = !hobitProcessAnalyzer.readData<bool>(0x0076035C, sizeof(uint32_t));  //0x0076035C: is loaded level address
+
+    
+        if (wasLevelLoaded != isLevelLoaded && isLevelLoaded)
+        {
+            if (isLevelLoaded)
+                eventEnterNewLevel();
+            else
+                eventExitLevel();
+        }
+
+
+        previousState = !!currentState;
+        previousLevel = !!currentLevel;
+        wasLevelLoaded = !!isLevelLoaded;
     }
 public:
-
+    void start()
+    {
+        stopThread = false; // Initialize stopThread to false
+        hobitProcessAnalyzer.startAnalyzingProcess();
+        updateThread = std::thread(&HobbitGameManager::update, this); // Start the update thread
+    }
+    bool isOnLevel()
+    {
+        return isLevelLoaded;
+    }
     bool isGameRunning()
     {
         return hobitProcessAnalyzer.isGameRunning();
@@ -185,8 +158,11 @@ public:
     }
     HobbitGameManager()
     {
-        start();
-        //updateThread = std::thread(update);
+        while (!isGameRunning())
+        {
+            std::cout << "You must open the game!" << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(2)); // Sleep for 2 seconds
+        }
     }
     ~HobbitGameManager()
     {

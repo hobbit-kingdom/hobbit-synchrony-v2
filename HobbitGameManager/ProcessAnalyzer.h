@@ -48,7 +48,7 @@ public:
 			CloseHandle(snapshot);
 
 		if (pid == 0) {
-			std::cout << "ERROR: " << processName << "Process Not Found" << std::endl;
+			std::cout << "WARNING: " << processName << " - Process Not Found" << std::endl;
 			return nullptr;
 		}
 
@@ -97,7 +97,7 @@ public:
 		if (!ReadProcessMemory(process, address, data.data(), byesSize, NULL)) {
 
 			std::cout << "ERROR: " << GetLastError() << std::endl;
-			return std::vector<uint8_t>();
+			return data;
 		}
 		return data;
 	}
