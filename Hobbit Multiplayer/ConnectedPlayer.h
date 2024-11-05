@@ -65,6 +65,13 @@ public:
         std::cout << "A: " << animation << std::endl << std::endl;
         std::cout << "\033[0m";
     }
+
+
+    std::vector<BaseMessage> write() {
+        //In case you need to send some state from the npc bilbo (which is unlickely) 
+        return std::vector<BaseMessage>();
+    }
+
     void clear() { id = -1; }
 
     void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)

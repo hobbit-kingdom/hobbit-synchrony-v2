@@ -39,7 +39,10 @@ public:
     {
         newLevel = convertQueueToType<uint32_t>(gameData);
     }
-    std::queue<uint8_t> write() {
+    std::vector<BaseMessage> write() {
+        std::vector<BaseMessage> messages;
+        BaseMessage snap(SNAPSHOT_MESSAGE, 0);
+
         // label - Snap, 0 - reserve for size
         std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::CONNECTED_PLAYER_SNAP), 0 };
         std::queue<uint8_t> dataQueue;
@@ -64,11 +67,12 @@ public:
 
         // Convert vector to queue
         for (const int& element : dataVec) {
-            dataQueue.push(element);
+            snap.message.push(element);
         }
 
         std::cout << "Sending: X " << position.x << ", Y " << position.y << ", Z " << position.z << ", R" << rotation.y << ", A " << animBilbo << std::endl;
-        return dataQueue;
+        messages.push_back(snap);
+        return messages;
     }
 
     void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)
