@@ -18,9 +18,6 @@
     <ClInclude Include="HobbitGameManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="HobbitManager Old version Bad version.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="HobbitProcessAnalyzer.h">
       <Filter>Header Files</Filter>
     </ClInclude>

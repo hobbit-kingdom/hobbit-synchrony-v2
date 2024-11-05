@@ -2,7 +2,7 @@
 #pragma warning(push)
 #pragma warning(disable : 4312)
 #pragma warning(disable : 4267)
-
+#include <mutex>
 #ifdef _WIN32
 #include <winsock2.h>   // Ensure winsock2.h is included before Windows.h
 #include <Windows.h>
@@ -15,13 +15,11 @@ class HobbitProcessAnalyzer : public ProcessAnalyzerTypeWrapped
 public:
 	HobbitProcessAnalyzer()
 	{
-		hobbitProcess = nullptr;
+		
+	}
+	void updatePtrToProcess()
+	{
 		hobbitProcess = getProcess("Meridian.exe");
-		objectStackAddress = 0;
-		if (hobbitProcess != nullptr)
-		{
-			startAnalyzingProcess();
-		}
 	}
 	using ProcessAnalyzer::readData;
 	using ProcessAnalyzerTypeWrapped::readData;
@@ -76,15 +74,20 @@ public:
 	}
 
 
-	void startAnalyzingProcess()
+	void updateObjectStackAddress()
 	{
 		try {
+			std::lock_guard<std::mutex> lock(objectStackMutex);
 			objectStackAddress = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F648), 4);
+			objectStackSize = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F650), 4);
 		}
 		catch (const std::runtime_error& e) {
-			std::cerr << "Error: " << e.what() << std::endl;
+			std::lock_guard<std::mutex> lock(objectStackMutex);
+			objectStackAddress = 0;
+			std::cerr << "ERROR: Failed to read Object Stack Address from memory address 0x0076F648. Exception: " << e.what() << std::endl;
 		}
 	}
+
 	uint32_t findGameObjByGUID(uint64_t guid)
 	{
 		if (hobbitProcess == 0)
@@ -93,13 +96,12 @@ public:
 			return 0;
 		}
 
-		static const size_t stackSize = 0x16B30;
 		static const size_t jumpSize = 0x14;
+		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= stackSize; offset += jumpSize)
+		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
-
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
 			if (objAddrs != 0)
 			{
@@ -124,10 +126,10 @@ public:
 			return 0;
 		}
 
-		static const size_t stackSize = 0xEFEC;
 		static const size_t jumpSize = 0x14;
+		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = stackSize; offset > 0; offset -= jumpSize)
+		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
@@ -156,10 +158,10 @@ public:
 
 		std::vector<uint32_t> gameObjs;
 
-		static const size_t stackSize = 0xEFEC;
 		static const size_t jumpSize = 0x14;
+		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = stackSize; offset > 0; offset -= jumpSize)
+		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
@@ -185,10 +187,10 @@ public:
 		}
 		std::unordered_map<uint32_t, std::vector<uint8_t>>  gameObjs(0);
 
-		static const size_t stackSize = 0xEFEC;
 		static const size_t jumpSize = 0x14;
+		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = stackSize; offset > 0; offset -= jumpSize)
+		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
@@ -211,10 +213,10 @@ public:
 
 		std::vector<uint32_t> foundObjects;
 
-		static const size_t stackSize = 0xEFEC;
 		static const size_t jumpSize = 0x14;
+		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = stackSize; offset > 0; offset -= jumpSize) {
+		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize) {
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
 			if (objAddrs != 0)
@@ -228,20 +230,9 @@ public:
 
 	bool isGameRunning()
 	{
-		hobbitProcess = getProcess("Meridian.exe");
-		if (hobbitProcess != nullptr)
-		{
-			startAnalyzingProcess();
-		}
-		return  (hobbitProcess != nullptr);
+		return  getProcess("Meridian.exe") != nullptr;
 	}
-	void refreshObjectStackAddress()
-	{
-		if (hobbitProcess != nullptr)
-		{
-			startAnalyzingProcess();
-		}
-	}
+
 
 	template <typename T>
 	std::vector<uint32_t> searchProcessMemory(T pattern)
@@ -255,6 +246,11 @@ public:
 	}
 
 private:
-	HANDLE hobbitProcess;
-	uint32_t objectStackAddress;
+
+	HANDLE hobbitProcess = 0;
+
+	uint32_t objectStackSize = 0x0;
+	uint32_t objectStackAddress = 0;
+
+	std::mutex objectStackMutex;
 };

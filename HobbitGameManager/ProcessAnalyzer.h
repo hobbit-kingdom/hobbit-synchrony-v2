@@ -85,22 +85,36 @@ public:
 		VirtualProtectEx(process, address, dwSize, oldProtect, NULL);
 	}
 
-	std::vector<uint8_t> readData(HANDLE process, LPVOID address, size_t byesSize)
+	std::vector<uint8_t> readData(HANDLE process, LPVOID address, size_t bytesSize)
 	{
-		std::vector<uint8_t> data(byesSize);
+		std::vector<uint8_t> data(bytesSize);
 		if (process == NULL)
 		{
-			std::cout << "ERROR: " << process << "Process Not Specified" << std::endl;
-			return std::vector<uint8_t>();
-		}
-
-		if (!ReadProcessMemory(process, address, data.data(), byesSize, NULL)) {
-
-			std::cout << "ERROR: " << GetLastError() << std::endl;
+			std::cout << "ERROR: Process Not Specified" << std::endl;
 			return data;
 		}
+
+		// Change memory protection to PAGE_READWRITE
+		DWORD oldProtect;
+		if (!VirtualProtectEx(process, address, bytesSize, PAGE_READWRITE, &oldProtect))
+		{
+			std::cout << "ERROR: Could not change memory protection. Error: " << GetLastError() << std::endl;
+			return data;
+		}
+
+		// Read the memory
+		if (!ReadProcessMemory(process, address, data.data(), bytesSize, NULL))
+		{
+			std::cout << "ERROR: Could not read memory. Error: " << GetLastError() << std::endl;
+			return data;
+		}
+
+		// Restore the old protection
+		VirtualProtectEx(process, address, bytesSize, oldProtect, &oldProtect);
+
 		return data;
 	}
+
 
 
 	std::vector<uint32_t> searchProcessMemory(HANDLE process, const std::vector<uint8_t>& pattern) {
