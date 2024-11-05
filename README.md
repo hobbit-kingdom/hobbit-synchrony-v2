@@ -1,3 +1,5 @@
+#THE SYNCHRONY
+
 The Synchrony will allow you to experience the world of The Hobbit together with your friends!
 
 This is a multiplayer mod which will allow you to see your friends!
