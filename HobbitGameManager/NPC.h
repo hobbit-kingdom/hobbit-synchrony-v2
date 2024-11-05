@@ -13,8 +13,6 @@ public:
 	{
 		guid = GUID;
 		hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
-		// set the Object Array Address
-		OBJECT_STACK_ADDRESS = hobbitProcessAnalyzer->readData<uint32_t>(0x0076F648, 4);
 
 		// Constructor message
 		std::cout << "~CreateNPC" << std::endl;
@@ -132,8 +130,6 @@ public:
 	}
 
 private:
-	// Address of Stack of Objects
-	static uint32_t OBJECT_STACK_ADDRESS; //equals to 0x0076F648
 	// Pointers
 	uint32_t objectAddress;					// Object pointer
 	std::vector<uint32_t> positionXAddress;	// Position X pointer
