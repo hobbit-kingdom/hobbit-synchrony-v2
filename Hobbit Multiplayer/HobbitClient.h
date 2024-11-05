@@ -51,7 +51,7 @@ private:
 
 
     static constexpr int MAX_PLAYERS = 7;
-    ConnectedPlayer connectedPlayer[MAX_PLAYERS];
+    ConnectedPlayer connectedPlayers[MAX_PLAYERS];
 
     MainPlayer mainPlayer;
     
@@ -86,6 +86,7 @@ int HobbitClient::start(const std::string& ip) {
         });
 
     if (client.start(serverIp)) return 1;
+    
 
     while (!hobbitGameManager.isGameRunning()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -103,6 +104,7 @@ int HobbitClient::start(const std::string& ip) {
     onOpenGame();
     updateThread = std::thread(&HobbitClient::update, this);
     return 0;
+    
 }
 
 void HobbitClient::stop() {
@@ -123,7 +125,7 @@ void HobbitClient::update() {
         readMessage();
         for (int i = 0; i < MAX_PLAYERS; ++i)
         {
-            connectedPlayer[i].processPlayer(client.getClientID());
+            connectedPlayers[i].processPlayer(client.getClientID());
         }
         writeMessage();
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -177,27 +179,27 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
 
         if (label == DataLabel::CONNECTED_PLAYER_SNAP)
         {
-            auto it = std::find_if(std::begin(connectedPlayer), std::end(connectedPlayer),
+            auto it = std::find_if(std::begin(connectedPlayers), std::end(connectedPlayers),
                 [&](const ConnectedPlayer& p) { return p.id == senderID; });
-            if (it != std::end(connectedPlayer)) {
+            if (it != std::end(connectedPlayers)) {
                 it->readConectedPlayerSnap(gameData);
             }
             else {
                 std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
-                connectedPlayer[0].readConectedPlayerSnap(gameData);
+                connectedPlayers[0].readConectedPlayerSnap(gameData);
             }
 
         }
         else if (label == DataLabel::CONNECTED_PLAYER_LEVEL)
         {
-            auto it = std::find_if(std::begin(connectedPlayer), std::end(connectedPlayer),
+            auto it = std::find_if(std::begin(connectedPlayers), std::end(connectedPlayers),
                 [&](const ConnectedPlayer& p) { return p.id == senderID; });
-            if (it != std::end(connectedPlayer)) {
+            if (it != std::end(connectedPlayers)) {
                 it->readConectedPlayerSnap(gameData);
             }
             else {
                 std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
-                connectedPlayer[0].readConectedPlayerSnap(gameData);
+                connectedPlayers[0].readConectedPlayerSnap(gameData);
             }
         }
         else
@@ -210,42 +212,38 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
 
 void HobbitClient::onEnterNewLevel() {
 
-    hobbitGameManager.getHobbitProcessAnalyzer()->startAnalyzingProcess();
-    mainPlayer.readPtrs();
     if (guids.size() == 0)
         guids = getPlayersNpcGuid();
+
+    mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+
+    for (ConnectedPlayer connectedPlayer : connectedPlayers)
+        connectedPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+
+    mainPlayer.readPtrs();
     for (int i = 0; i < MAX_PLAYERS; ++i)
     {
-        connectedPlayer[i].npc.setNCP(guids[i], hobbitGameManager.getHobbitProcessAnalyzer());
+        connectedPlayers[i].npc.setNCP(guids[i], &hobbitGameManager.getHobbitProcessAnalyzer());
     }
     processMessages = true;
-
 }
 void HobbitClient::onOpenGame()
 {
     processMessages = false;
     mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
-    ConnectedPlayer::setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+
+    for(ConnectedPlayer connectedPlayer : connectedPlayers)
+        connectedPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+    
     if (hobbitGameManager.isOnLevel())
-    {
-
-        mainPlayer.readPtrs();
-        guids = getPlayersNpcGuid();
-        for (int i = 0; i < MAX_PLAYERS; ++i)
-        {
-            connectedPlayer[i].npc.setNCP(guids[i], hobbitGameManager.getHobbitProcessAnalyzer());
-        }
-        processMessages = true;
-
-    }
-
+        onEnterNewLevel();
 }
 
 
 void HobbitClient::onClientListUpdate(const std::queue<uint8_t>&) {
     std::queue<uint8_t> connectedClients = client.getConnectedClients();
     for (int i = 0; i < MAX_PLAYERS; ++i) {
-        connectedPlayer[i].id = connectedClients.empty() ? -1 : connectedClients.front();
+        connectedPlayers[i].id = connectedClients.empty() ? -1 : connectedClients.front();
         if (!connectedClients.empty()) connectedClients.pop(); // Remove the front element from the queue
     }
 }
@@ -289,5 +287,3 @@ std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
     std::cout << "FOUND FILE!" << std::endl;
     return tempGUID;
 }
-
-

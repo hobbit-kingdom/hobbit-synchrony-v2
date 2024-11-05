@@ -21,6 +21,12 @@
     <ClCompile Include="Source.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConnectedPlayer.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ConnectedPlayer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HobbitClient.h">
@@ -30,6 +36,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Utility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MainPlayer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

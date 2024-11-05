@@ -23,7 +23,7 @@
 
 // Player classes
 class ConnectedPlayer {
-    static HobbitProcessAnalyzer* hobbitProcessAnalyzer;
+    HobbitProcessAnalyzer* hobbitProcessAnalyzer;
     uint32_t animation;
     Vector3 position, rotation;
 
@@ -67,10 +67,9 @@ public:
     }
     void clear() { id = -1; }
 
-    static void setHobbitProcessAnalyzer(HobbitProcessAnalyzer* newHobbitProcessAnalyzer)
+    void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)
     {
-        hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
+        hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
     }
 };
-HobbitProcessAnalyzer* ConnectedPlayer::hobbitProcessAnalyzer;
 

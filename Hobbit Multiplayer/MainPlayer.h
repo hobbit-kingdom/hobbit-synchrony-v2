@@ -67,12 +67,13 @@ public:
             dataQueue.push(element);
         }
 
+        std::cout << "Sending: X " << position.x << ", Y " << position.y << ", Z " << position.z << ", R" << rotation.y << ", A " << animBilbo << std::endl;
         return dataQueue;
     }
 
-    void setHobbitProcessAnalyzer(HobbitProcessAnalyzer* newHobbitProcessAnalyzer)
+    void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)
     {
-        hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
+        hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
     }
     void readPtrs() {
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR, 4);
