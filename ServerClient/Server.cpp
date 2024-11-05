@@ -114,8 +114,8 @@ void Server::handleClient(ClientHandler* clientHandler) {
         std::lock_guard<std::mutex> lock(clientsMutex);
         clients.erase(std::remove_if(clients.begin(), clients.end(),
             [clientID](ClientHandler* ch) { return ch->clientID == clientID; }), clients.end());
-        notifyClients(); // Notify all clients of the disconnection
     }
+        notifyClients(); // Notify all clients of the disconnection
 
 
     closesocket(clientSocket);
