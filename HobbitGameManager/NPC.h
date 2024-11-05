@@ -16,7 +16,7 @@ public:
 
 		// Constructor message
 		std::cout << "~CreateNPC" << std::endl;
-
+		hobbitProcessAnalyzer->updateObjectStackAddress();
 		// read the pointers of instances
 		setObjectPtrByGUID(GUID);
 		setPositionXPtr();
