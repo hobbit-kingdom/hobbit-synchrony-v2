@@ -25,6 +25,7 @@
 class ConnectedPlayer {
     HobbitProcessAnalyzer* hobbitProcessAnalyzer;
     uint32_t animation;
+    float animFrame, lastAnimFrame;
     Vector3 position, rotation;
 
     uint32_t level;
@@ -33,6 +34,8 @@ public:
     NPC npc;
     void readConectedPlayerSnap(std::queue<uint8_t>& gameData) {
         animation = convertQueueToType<uint32_t>(gameData);
+        animFrame = convertQueueToType<float>(gameData);
+        lastAnimFrame = convertQueueToType<float>(gameData);
         position.x = convertQueueToType<float>(gameData);
         position.y = convertQueueToType<float>(gameData);
         position.z = convertQueueToType<float>(gameData);
@@ -54,6 +57,7 @@ public:
         npc.setPositionZ(position.z);
         npc.setRotationY(rotation.y);
         npc.setAnimation(animation);
+        npc.setAnimFrames(animFrame, lastAnimFrame);
 
         // Display the data
         std::cout << "\033[33m";

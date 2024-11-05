@@ -53,9 +53,16 @@ public:
         position.z = hobbitProcessAnalyzer->readData<float>(0x7CC + bilboPosXPTR, 4);
         rotation.y = hobbitProcessAnalyzer->readData<float>(0x7AC + bilboPosXPTR, 4);
         uint32_t animBilbo = hobbitProcessAnalyzer->readData<uint32_t>(bilboAnimPTR, 4);
+        float bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530, 4);
+        float bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C, 4);
 
         pushTypeToVector(animBilbo, dataVec);
         dataVec[1] += sizeof(animBilbo);
+
+        pushTypeToVector(bilboAnimFrame, dataVec);
+        dataVec[1] += sizeof(bilboAnimFrame);
+        pushTypeToVector(bilboLastAnimFrame, dataVec);
+        dataVec[1] += sizeof(bilboLastAnimFrame);
 
         pushTypeToVector(position.x, dataVec);
         pushTypeToVector(position.y, dataVec);
@@ -65,6 +72,7 @@ public:
         pushTypeToVector(rotation.y, dataVec);
         dataVec[1] += sizeof(rotation.y);
 
+        
         // Convert vector to queue
         for (const int& element : dataVec) {
             snap.message.push(element);

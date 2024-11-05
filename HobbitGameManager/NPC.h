@@ -128,6 +128,11 @@ public:
 	{
 		hobbitProcessAnalyzer->writeData(animationAddress, newAnimation);
 	}
+	void setAnimFrames(float newAnimFrame, float newLastAnimFrame)
+	{
+		hobbitProcessAnalyzer->writeData(animationAddress + 0x8, newAnimFrame);
+		hobbitProcessAnalyzer->writeData(animationAddress + 0x14, newLastAnimFrame);
+	}
 
 private:
 	// Pointers
