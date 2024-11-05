@@ -229,6 +229,7 @@ void HobbitClient::onEnterNewLevel() {
 
     if (guids.size() == 0)
         guids = getPlayersNpcGuid();
+    hobbitGameManager.getHobbitProcessAnalyzer().updateObjectStackAddress();
 
     mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
 

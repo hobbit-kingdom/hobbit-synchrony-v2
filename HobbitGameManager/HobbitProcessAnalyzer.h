@@ -98,9 +98,9 @@ public:
 
 		static const size_t jumpSize = 0x14;
 		std::lock_guard<std::mutex> lock(objectStackMutex);
-
-		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
-		{
+		size_t offset = 0;
+		while(true){
+		//for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
 			if (objAddrs != 0)
@@ -109,9 +109,12 @@ public:
 				uint64_t objGUID = readData<uint64_t>(hobbitProcess, reinterpret_cast<LPVOID>(guidAddrs), 8);
 				if (objGUID == guid)
 				{
+					std::cout << "Found GUID at ObjectAddres: " << offset / 0x14 << std::endl;
+					std::cout << "Found GUID at objectStackSize: " << objectStackSize << std::endl;
 					return objAddrs;
 				}
 			}
+			offset += jumpSize;
 		}
 
 		std::cout << "WARNING: Couldn't find " << guid << " GUID in the Game Object Stack" << std::endl;
