@@ -30,7 +30,7 @@ class ConnectedPlayer {
 
     uint32_t level;
 
-    std::queue<std::pair<uint64_t, uint32_t>> hurtEnemies;//guid Health
+    std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
 public:
     int id = -1;
     NPC npc;
@@ -50,7 +50,7 @@ public:
         for (int i = 0; i < numberHurtEnemies; ++i)
         {
             uint64_t guid = convertQueueToType<uint64_t>(gameData);
-            uint32_t health = convertQueueToType<uint32_t>(gameData);
+            float health = convertQueueToType<float>(gameData);
             hurtEnemies.push(std::pair(guid, health));
         }
     }

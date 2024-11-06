@@ -15,7 +15,9 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
-
+#include <limits>
+#include <utility> // for std::make_pair
+#include <limits>  // for std::numeric_limits
 #include "Utility.h"
 #include "../ServerClient/Client.h"
 #include "../HobbitGameManager/HobbitGameManager.h"
@@ -36,7 +38,7 @@ class MainPlayer {
     float bilboLastAnimFrame;
     const uint32_t X_POSITION_PTR = 0x0075BA3C;
 
-    std::vector<std::pair<NPC, uint32_t>> enemies; //NPC and previous Health
+    std::vector<std::pair<NPC, float>> enemies; //NPC and previous Health
 
 
     std::atomic<bool> processPackets;
@@ -65,15 +67,15 @@ public:
     void readPtrs() {
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
-        // TO DO
-        //find all enemies in the level
-        //std::vector<uint64_t> allEnemiesGUIDS = hobbitProcessAnalyzer->findReadAllGameObjByPattern<uint64_t, uint32_t>( 0xABCABCABC, 0xABCABCABC, 0x8); //put the values that indicate that thing
-        //
-        //
-        //for (const uint32_t& e : allEnemiesGUIDS) {
+
+
+        std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint32_t>( 0xABCABCABC, 0xC4); //put the values that indicate that thing
+        //for (uint32_t e : allEnemieAddrs)
+        //{
         //    NPC npc;
-        //    npc.setNCP(e);
-        //    enemies.push_back(std::make_pair(npc, 0xFFFFFFFF));
+        //    uint32_t guid = hobbitProcessAnalyzer->readData<uint32_t>(e + 0x8);
+        //    npc.setNCP(guid);
+        //    enemies.push_back(std::make_pair(npc, npc.getHealth()));
         //}
     }
 
@@ -121,15 +123,19 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (std::pair<NPC, uint32_t> e : enemies)
+        for (std::pair<NPC, float> e : enemies)
         {
             if (e.second >= e.first.getHealth())
             {
+
+                //GUID
                 pushTypeToVector(e.first.getGUID(), dataVec);
                 dataVec[1] += sizeof(e.first.getGUID());
 
+                //Heath
                 pushTypeToVector(e.first.getHealth(), dataVec);
                 dataVec[1] += sizeof(e.first.getHealth());
+
                 ++enemisSend;
             }
         }
