@@ -68,8 +68,9 @@ public:
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
 
-
+        std::cout << "Searching for Enemies" << std::endl;
         std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint32_t>( 0xABCABCABC, 0xC4); //put the values that indicate that thing
+        std::cout << "End of searching for Enemies" << std::endl;
         //for (uint32_t e : allEnemieAddrs)
         //{
         //    NPC npc;
