@@ -64,7 +64,7 @@ public:
 
     uint8_t getClientID() { return clientID; }
     std::queue<uint8_t> getConnectedClients() { return connectedClients; }
-
+    void notifyServerDown();
 private:
     SOCKET serverSocket;
 

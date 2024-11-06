@@ -28,7 +28,7 @@ public:
 
     void start();
     void stop();
-
+    bool getIsRunning() { return isRunning; };
     void broadcastMessage(const BaseMessage &msg, uint8_t excludeID = 0);
 private:
     SOCKET listeningSocket;

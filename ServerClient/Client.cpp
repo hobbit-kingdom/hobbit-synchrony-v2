@@ -90,6 +90,8 @@ void Client::receiveMessages() {
         // Receive message size
         int bytesReceived = recv(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
         if (bytesReceived <= 0) {
+            std::cerr << "Server is down or connection lost.\n"; // Notify the client
+            notifyServerDown(); // Custom function to handle disconnection
             break; // Exit loop if no bytes received
         }
         msgSize = ntohl(msgSize); // Convert size back to host byte order
@@ -200,4 +202,10 @@ void Client::updateClientList(const std::queue<uint8_t>& clientIDs) {
 
 void Client::addListener(std::function<void(const std::queue<uint8_t>&)> listener) {
     listeners.push_back(listener); // Add a new listener to the list
+}
+
+void Client::notifyServerDown() {
+    isConnected = false; // Set connection flag to false
+    std::cout << "Disconnected from server. Please check the server status.\n";
+    updateClientList(std::queue<uint8_t>());
 }

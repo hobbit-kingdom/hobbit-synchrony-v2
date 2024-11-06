@@ -13,24 +13,6 @@
 
 using namespace std;
 
-std::atomic<bool> ctrlXPressed(false);
-
-//void checkForCtrlX() {
-//	std::cout << "Press Ctrl + X to exit." << std::endl;
-//
-//	while (true) {
-//		// Check if Ctrl is pressed
-//		if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
-//			// Check if X is pressed
-//			if (GetAsyncKeyState('X') & 0x8000) {
-//				ctrlXPressed.store(true); // Set the flag to true
-//				break; // Exit the loop if Ctrl + X is pressed
-//			}
-//		}
-//		Sleep(100); // Sleep for a short time to avoid busy waiting
-//	}
-//}
-
 int mainMenu()
 {
 
@@ -40,14 +22,16 @@ int mainMenu()
 		cout << "1 Server" << endl;
 		cout << "2 Client" << endl;
 		cout << "3 Server & Client" << endl;
-		cout << "Ctrl + X Close Program" << endl << endl;
+		cout << "Q Close Program" << endl << endl;
 		cout << "Enter Your Choise: ";
 
 		cin >> input;
-		if (ctrlXPressed) break;
+		input = toupper(input);
 
-		if (input >= '1' && input <= '3') 
+		if (input >= '1' && input <= '3')
 			return input;
+		else if (input == 'Q')
+			break;
 		else 
 			cout << "You must enter one of the choices bellow:" << endl;
 
@@ -61,8 +45,8 @@ void server()
 	cout << "Server Started" << endl;
 	cout << "Press Ctrl+X to stop the server..." << endl;
 	
-	while (!ctrlXPressed) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	while (server.getIsRunning()) {
+		this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 
 	server.stop();
@@ -75,10 +59,9 @@ void client()
 	if (hobbitClient.start())
 		return;
 	cout << "Client Started" << endl;
-	cout << "Press Ctrl + X to stop the client ..." << endl;
 
-	while (!ctrlXPressed) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	while (hobbitClient.isRunning()) {
+		this_thread::sleep_for(std::chrono::milliseconds(2000));
 	}
 
 	hobbitClient.stop();
@@ -96,30 +79,23 @@ void serverClient()
 		return;
 	cout << "Client Started" << endl;
 
-
-	cout << "Press Ctrl + X to stop the client ..." << endl;
-
-	while (!ctrlXPressed) {
-		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	while (hobbitClient.isRunning()) {
+		this_thread::sleep_for(std::chrono::milliseconds(2000));
 	}
-
-	server.stop();
-	cout << "Server Stoped" << endl;
 	hobbitClient.stop();
 	cout << "Hobbit Client Stoped" << endl;
+	server.stop();
+	cout << "Server Stoped" << endl;
 }
 
 int main()
 {
-	// Start the Ctrl + X checking function in a separate thread
-	//std::thread ctrlXThread(checkForCtrlX);
 	do
 	{
-		if (ctrlXPressed) break;
 		switch (mainMenu())
 		{
 		case '0':
-			cout << "end program" << endl;
+			cout << "End program" << endl;
 			break;
 		case '1':
 			server();
@@ -135,7 +111,5 @@ int main()
 			break;
 		}
 	} while (true);
-	//if(ctrlXThread.joinable())
-	//	ctrlXThread.join();
 	return 0;
 }
