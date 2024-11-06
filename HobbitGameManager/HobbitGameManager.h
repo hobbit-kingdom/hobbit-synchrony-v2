@@ -48,7 +48,7 @@ public:
     }
     bool isOnLevel()
     {
-        return   (!!hobitProcessAnalyzer.readData<bool>(0x007A59C8, sizeof(uint32_t)) && !isLevelLoading);
+        return   (!!hobitProcessAnalyzer.readData<bool>(0x007A59C8) && !isLevelLoading);
     }
     bool isGameRunning()
     {
@@ -172,12 +172,12 @@ private:
             return;
 
         // read instances of game (current level, etc.)
-        currentState = hobitProcessAnalyzer.readData<uint32_t>(0x00762B58, sizeof(uint32_t)); // 0x00762B58: game state address
-        currentLevel = hobitProcessAnalyzer.readData<uint32_t>(0x00762B5C, sizeof(uint32_t));  // 0x00762B5C: current level address
-        isLevelEnded = !hobitProcessAnalyzer.readData<bool>(0x00760354, sizeof(uint32_t));  //0x00760354: is loaded level address
-        isLevelLoading = hobitProcessAnalyzer.readData<bool>(0x0076035C, sizeof(uint32_t));  //0x0x0072F048: is loaded level address
+        currentState = hobitProcessAnalyzer.readData<uint32_t>(0x00762B58); // 0x00762B58: game state address
+        currentLevel = hobitProcessAnalyzer.readData<uint32_t>(0x00762B5C);  // 0x00762B5C: current level address
+        isLevelEnded = !hobitProcessAnalyzer.readData<bool>(0x00760354);  //0x00760354: is loaded level address
+        isLevelLoading = hobitProcessAnalyzer.readData<bool>(0x0076035C);  //0x0x0072F048: is loaded level address
 
-        bool isLevelAssigned = !!hobitProcessAnalyzer.readData<bool>(0x007A59C8, sizeof(uint32_t));  //0x0x0072F048: is loaded level address
+        bool isLevelAssigned = !!hobitProcessAnalyzer.readData<bool>(0x007A59C8);  //0x0x0072F048: is loaded level address
         isLevelLoaded = (isLevelAssigned && !isLevelLoading);
 
         if (wasLevelEnded != isLevelEnded && isLevelEnded)

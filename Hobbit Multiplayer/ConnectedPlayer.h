@@ -44,13 +44,13 @@ public:
         rotation.y = convertQueueToType<float>(gameData);
     }
     void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
-        uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
+    uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
 
 
         for (int i = 0; i < numberHurtEnemies; ++i)
         {
             uint64_t guid = convertQueueToType<uint64_t>(gameData);
-            uint32_t health = convertQueueToType<uint64_t>(gameData);
+            uint32_t health = convertQueueToType<uint32_t>(gameData);
             hurtEnemies.push(std::pair(guid, health));
         }
     }

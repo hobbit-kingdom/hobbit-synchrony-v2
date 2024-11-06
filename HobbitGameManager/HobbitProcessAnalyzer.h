@@ -22,56 +22,43 @@ public:
 	{
 		hobbitProcess = getProcess("Meridian.exe");
 	}
-	using ProcessAnalyzer::readData;
+
 	using ProcessAnalyzerTypeWrapped::readData;
-	using ProcessAnalyzer::writeData;
 	using ProcessAnalyzerTypeWrapped::writeData;
 	using ProcessAnalyzerTypeWrapped::searchProcessMemory;
 
-
-	std::vector<uint8_t> readData(uint32_t address, size_t byesSize)
-	{
-		return ProcessAnalyzer::readData(hobbitProcess, (LPVOID)address, byesSize);
-	}
-
-	template <typename T>
-	T readData(uint32_t address, size_t byesSize)
-	{
-		return convertToType<T>(ProcessAnalyzer::readData(hobbitProcess, (LPVOID)address, byesSize));
-	}
-
-	// Write a single data element of type T to the specified memory address in hobbitProcess
-	template <typename T>
-	void writeData(uint32_t address, const T& data)
-	{
+	bool isProcessSet() {
 		if (hobbitProcess == nullptr)
-		{
 			std::cerr << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return;
-		}
 
-		// Convert the data to a vector of bytes for writing
-		std::vector<uint8_t> byteData = convertToUint8Vector(data);
-
-		// Use the base class writeData function to perform the memory write
-		ProcessAnalyzer::writeData(hobbitProcess, reinterpret_cast<LPVOID>(address), byteData);
-		return;
+		return (hobbitProcess != nullptr);
 	}
-	// Write a vector of data to the specified memory address in hobbitProcess
+
 	template <typename T>
-	void writeData(uint32_t address, const std::vector<T>& dataVec)
+	T readData(uint32_t address)
 	{
-		if (hobbitProcess == nullptr)
-		{
-			std::cerr << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return false;
-		}
+		if (!isProcessSet()) return 0;
+		return convertToType<T>(ProcessAnalyzer::readData(hobbitProcess, (LPVOID)address, sizeof(T)));
+	}
+	template <typename T>
+	std::vector<T> readData(uint32_t address, size_t byesSize)
+	{
+		if (!isProcessSet()) return std::vector<T>(byesSize);
+		return ProcessAnalyzerTypeWrapped::readData(hobbitProcess, (LPVOID)address, byesSize);
+	}
 
-		// Convert the vector of data elements to a vector of bytes
-		std::vector<uint8_t> byteData = convertToUint8Vector(dataVec);
-
-		// Write the byte vector to the target address
-		ProcessAnalyzer::writeData(hobbitProcess, reinterpret_cast<LPVOID>(address), byteData);
+	
+	template <typename T>
+	void writeData(uint32_t address, T data)
+	{
+		if (!isProcessSet()) return;
+		ProcessAnalyzerTypeWrapped::writeData(hobbitProcess, (LPVOID)address, data);
+	}
+	template <typename T>
+	void writeData(uint32_t address, std::vector<T> data)
+	{
+		if (!isProcessSet()) return;
+		ProcessAnalyzerTypeWrapped::writeData(hobbitProcess, (LPVOID)address, data);
 	}
 
 
@@ -79,7 +66,7 @@ public:
 	{
 		try {
 			std::lock_guard<std::mutex> lock(objectStackMutex);
-			objectStackAddress = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F648), 4);
+			objectStackAddress = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F648));
 		}
 		catch (const std::runtime_error& e) {
 			std::lock_guard<std::mutex> lock(objectStackMutex);
@@ -90,26 +77,19 @@ public:
 
 	uint32_t findGameObjByGUID(uint64_t guid)
 	{
-		if (hobbitProcess == 0)
-		{
-			std::cout << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return 0;
-		}
+		if (!isProcessSet()) return 0;
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
-		//size_t offset = 0;
-		//while(true){
-		for (size_t offset = 0; offset <= 0xFFFF * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE){
+
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE){
 			uint32_t objStackAddress = objectStackAddress + offset;
-			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
 			{
 				uint32_t guidAddrs = objAddrs + 0x8;
-				uint64_t objGUID = readData<uint64_t>(hobbitProcess, reinterpret_cast<LPVOID>(guidAddrs), 8);
+				uint64_t objGUID = readData<uint64_t>(hobbitProcess, reinterpret_cast<LPVOID>(guidAddrs));
 				if (objGUID == guid)
 				{
-					std::cout << "Found GUID at ObjectAddres: " << std::hex <<offset / 0x14 << std::endl;
-					std::cout << "Found GUID at objectStackSize: " << OBJECT_STACK_SIZE << std::endl;
 					return objAddrs;
 				}
 			}
@@ -118,43 +98,62 @@ public:
 		std::cout << "WARNING: Couldn't find " << guid << " GUID in the Game Object Stack" << std::endl;
 		return 0;
 	}
-
-	uint32_t findGameObjByPattern(const std::vector<uint8_t>& data, size_t dataSize, uint32_t shift)
+	template <typename T>
+	uint32_t findGameObjByPattern(T pattern, uint32_t shift)
 	{
-		if (hobbitProcess == 0)
-		{
-			std::cout << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return 0;
-		}
+		if (!isProcessSet()) return 0;
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
-		{
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
 			uint32_t objStackAddress = objectStackAddress + offset;
-			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
 			{
 				uint32_t patternAddrs = objAddrs + shift;
-				std::vector<uint8_t> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), dataSize);
-				if (memcmp(objPattern.data(), data.data(), dataSize) == 0)
+				T objPattern = readData<T>(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs));
+				if (objPattern == pattern)
 				{
 					return objAddrs;
 				}
 			}
 		}
 
-		std::cout << "WARNING: Couldn't find " << data[0] << " GUID in the Game Object Stack" << std::endl;
+		std::cout << "WARNING: Couldn't find " << pattern << " Pattern in the Game Object Stack" << std::endl;
 		return 0;
 	}
-
-	std::vector<uint32_t> findAllGameObjByPattern(const std::vector<uint8_t>& data, size_t dataSize, uint32_t shift)
+	template <typename T>
+	uint32_t findGameObjByPattern(const std::vector<T>& data, uint32_t shift)
 	{
-		if (hobbitProcess == nullptr)
+		if (!isProcessSet()) return 0;
+
+		std::lock_guard<std::mutex> lock(objectStackMutex);
+
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
-			std::cout << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return std::vector<uint32_t>();
+			uint32_t objStackAddress = objectStackAddress + offset;
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
+			if (objAddrs != 0)
+			{
+				uint32_t patternAddrs = objAddrs + shift;
+				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), data.size() * sizeof(T));
+				if (memcmp(objPattern.data(), data.data(), data.size()) == 0)
+				{
+					return objAddrs;
+				}
+			}
 		}
+
+		std::cout << "WARNING: Couldn't find ";
+		for (T e : data) std::cout << e << "_";
+		std::cout << " Pattern in the Game Object Stack" << std::endl;
+
+		return 0;
+	}
+	template <typename T>
+	std::vector<uint32_t> findAllGameObjByPattern(const std::vector<T>& data, uint32_t shift)
+	{
+		if (!isProcessSet()) return std::vector<uint32_t>(0);
 
 		std::vector<uint32_t> gameObjs;
 
@@ -163,27 +162,33 @@ public:
 		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
-			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
 			{
 				uint32_t patternAddrs = objAddrs + shift;
-				std::vector<uint8_t> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), dataSize);
-				if (memcmp(objPattern.data(), data.data(), dataSize) == 0)
+				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), data.size() * sizeof(T));
+				if (memcmp(objPattern.data(), data.data(), data.size()) == 0)
 				{
 					gameObjs.push_back(objStackAddress);
 				}
 			}
 		}
 
+		if (gameObjs.size() == 0)
+		{
+			std::cout << "WARNING: Couldn't find ";
+			for (T e : data) std::cout << e << "_";
+			std::cout << " Pattern in the Game Object Stack" << std::endl;
+		}
+
 		return gameObjs;
 	}
+	// TO DO
+	// what does it do exaactly, is it usefull?
 	std::unordered_map<uint32_t, std::vector<uint8_t>> readAllGameObjByPattern(size_t dataSize, uint32_t shift)
 	{
-		if (hobbitProcess == nullptr)
-		{
-			std::cout << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return std::unordered_map<uint32_t, std::vector<uint8_t>>();
-		}
+		if (!isProcessSet()) return std::unordered_map<uint32_t, std::vector<uint8_t>>(0);
+
 		std::unordered_map<uint32_t, std::vector<uint8_t>>  gameObjs(0);
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
@@ -191,7 +196,7 @@ public:
 		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
-			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
 			{
 				uint32_t patternAddrs = objAddrs + shift;
@@ -203,11 +208,7 @@ public:
 	}
 
 	std::vector<uint32_t> getAllObjects() {
-		if (hobbitProcess == nullptr)
-		{
-			std::cout << "ERROR: Hobbit Process is NOT set" << std::endl;
-			return std::vector<uint32_t>();
-		}
+		if (!isProcessSet()) return std::vector<uint32_t>(0);
 
 		std::vector<uint32_t> foundObjects;
 
@@ -215,7 +216,7 @@ public:
 
 		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
 			uint32_t objStackAddress = objectStackAddress + offset;
-			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
 			{
 				foundObjects.push_back(objAddrs);

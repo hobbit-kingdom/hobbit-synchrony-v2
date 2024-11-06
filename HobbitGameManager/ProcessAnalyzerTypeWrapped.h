@@ -35,15 +35,27 @@ public:
 	{
 		getProcess(processName.c_str());
 	}
+	
 	template <typename T>
 	void writeData(HANDLE process, LPVOID address, T data)
 	{
 		ProcessAnalyzer::writeData(process, address, convertToUint8Vector(data));
 	}
 	template <typename T>
-	T readData(HANDLE process, LPVOID address, size_t byesSize)
+	void writeData(HANDLE process, LPVOID address, std::vector<T> data)
 	{
-		return convertToType<T>(ProcessAnalyzer::readData(process, address, byesSize));
+		ProcessAnalyzer::writeData(process, address, convertToUint8Vector(data));
+	}
+
+	template <typename T>
+	T readData(HANDLE process, LPVOID address)
+	{
+		return convertToType<T>(ProcessAnalyzer::readData(process, address, sizeof(T)));
+	}
+	template <typename T>
+	std::vector<T> readData(HANDLE process, LPVOID address, size_t size)
+	{
+		return convertToVector<T>(ProcessAnalyzer::readData(process, address, size * sizeof(T)));
 	}
 
 	template <typename T>
@@ -66,8 +78,6 @@ public:
 
 		return byteVector;
 	}
-
-	// Template function to convert a vector of any trivially copyable type to std::vector<uint8_t>
 	template <typename T>
 	std::vector<uint8_t> convertToUint8Vector(const std::vector<T>& vec, bool inputBigEndian = true) {
 		static_assert(std::is_trivially_copyable<T>::value, "Type T must be trivially copyable");
@@ -94,6 +104,9 @@ public:
 
 	template <typename T>
 	std::vector<T> convertToVector(const std::vector<uint8_t>& data) {
+		if (T == uint8_t)
+			return data;
+
 		size_t numElements = data.size() / sizeof(T);
 		std::vector<T> result(numElements);
 

@@ -186,9 +186,9 @@ private:
 
 		// set the animation position X pointer
 		uint32_t animAdd1 = getObjectPtr();
-		uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + animAdd1, 4);
-		uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd2, 4);
-		uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3, 4);
+		uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + animAdd1);
+		uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd2);
+		uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3);
 		animationAddress = 0x8 + animAdd4;
 		positionXAddress.push_back(-0xC4 + animationAddress);
 
@@ -198,7 +198,7 @@ private:
 		{
 			//dispplay the poistion Data
 			std::cout << "~Position Data:" << std::endl;
-			std::cout << "~posX: " << hobbitProcessAnalyzer->readData<float>(posxAdd, 4) << std::endl;
+			std::cout << "~posX: " << hobbitProcessAnalyzer->readData<float>(posxAdd) << std::endl;
 			std::cout << "~posXAddress: " << posxAdd << std::endl;
 		}
 		std::cout << std::dec;
@@ -216,7 +216,7 @@ private:
 		// Display the rotation Y pointer Data
 		std::cout << std::hex;
 		std::cout << "~Rotation Data:" << std::endl;
-		std::cout << "~rotY: " << hobbitProcessAnalyzer->readData<float>(rotationYAddress, 4) << std::endl;
+		std::cout << "~rotY: " << hobbitProcessAnalyzer->readData<float>(rotationYAddress) << std::endl;
 		std::cout << "~rotYAddress: " << rotationYAddress << std::endl;
 		std::cout << std::endl;
 		std::cout << std::dec;
@@ -226,15 +226,15 @@ private:
 	{
 		// set animation pointer
 		uint32_t animAdd1 = getObjectPtr();
-		uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + animAdd1, 4);
-		uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd2, 4);
-		uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3, 4);
+		uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + animAdd1);
+		uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd2);
+		uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3);
 		animationAddress = 0x8 + animAdd4;
 
 
 		// Display the animation pointer Data
 		std::cout << std::hex;
-		std::cout << "anim: " << hobbitProcessAnalyzer->readData<uint32_t>(animationAddress, 4) << std::endl;
+		std::cout << "anim: " << hobbitProcessAnalyzer->readData<uint32_t>(animationAddress) << std::endl;
 		std::cout << "animAddress: " << animationAddress << std::endl;
 		std::cout << std::endl;
 	}

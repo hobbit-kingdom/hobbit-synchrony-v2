@@ -63,8 +63,8 @@ public:
         hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
     }
     void readPtrs() {
-        bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR, 4);
-        bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR, 4), 4);
+        bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
+        bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
 
         //find all enemies in the level
         //std::vector<std::pair<NPC, NPC>> enemies;
@@ -139,14 +139,14 @@ private:
     }
     void processData()
     {
-        position.x = hobbitProcessAnalyzer->readData<float>(0x7C4 + bilboPosXPTR, 4);
-        position.y = hobbitProcessAnalyzer->readData<float>(0x7C8 + bilboPosXPTR, 4);
-        position.z = hobbitProcessAnalyzer->readData<float>(0x7CC + bilboPosXPTR, 4);
-        rotation.y = hobbitProcessAnalyzer->readData<float>(0x7AC + bilboPosXPTR, 4);
-        animation = hobbitProcessAnalyzer->readData<uint32_t>(bilboAnimPTR, 4);
+        position.x = hobbitProcessAnalyzer->readData<float>(0x7C4 + bilboPosXPTR);
+        position.y = hobbitProcessAnalyzer->readData<float>(0x7C8 + bilboPosXPTR);
+        position.z = hobbitProcessAnalyzer->readData<float>(0x7CC + bilboPosXPTR);
+        rotation.y = hobbitProcessAnalyzer->readData<float>(0x7AC + bilboPosXPTR);
+        animation = hobbitProcessAnalyzer->readData<uint32_t>(bilboAnimPTR);
 
-        bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530, 4);
-        bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C, 4);
+        bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530);
+        bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C);
 
     }
 };
