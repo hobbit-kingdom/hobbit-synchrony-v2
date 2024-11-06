@@ -29,6 +29,8 @@ class ConnectedPlayer {
     Vector3 position, rotation;
 
     uint32_t level;
+
+    std::queue<std::pair<uint64_t, uint32_t>> hurtEnemies;//guid Health
 public:
     int id = -1;
     NPC npc;
@@ -40,6 +42,17 @@ public:
         position.y = convertQueueToType<float>(gameData);
         position.z = convertQueueToType<float>(gameData);
         rotation.y = convertQueueToType<float>(gameData);
+    }
+    void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
+        uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
+
+
+        for (int i = 0; i < numberHurtEnemies; ++i)
+        {
+            uint64_t guid = convertQueueToType<uint64_t>(gameData);
+            uint32_t health = convertQueueToType<uint64_t>(gameData);
+            hurtEnemies.push(std::pair(guid, health));
+        }
     }
     void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
     {
@@ -68,6 +81,15 @@ public:
         std::cout << "R: " << rotation.y << " || ";
         std::cout << "A: " << animation << std::endl << std::endl;
         std::cout << "\033[0m";
+
+        // Update Health of Enemies
+        while (!hurtEnemies.empty())
+        {
+            NPC enemy; 
+            enemy.setNCP(hurtEnemies.front().first, hobbitProcessAnalyzer);
+            enemy.setHealth(hurtEnemies.front().second);
+            hurtEnemies.pop();
+        }
     }
 
 

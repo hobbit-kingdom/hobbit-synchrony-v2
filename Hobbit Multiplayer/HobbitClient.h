@@ -207,16 +207,16 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
             }
 
         }
-        else if (label == DataLabel::CONNECTED_PLAYER_LEVEL)
+        else if (label == DataLabel::ENEMIES_HEALTH)
         {
             auto it = std::find_if(std::begin(connectedPlayers), std::end(connectedPlayers),
                 [&](const ConnectedPlayer& p) { return p.id == senderID; });
             if (it != std::end(connectedPlayers)) {
-                it->readConectedPlayerSnap(gameData);
+                it->readProcessEnemiesHealth(gameData);
             }
             else {
                 std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
-                connectedPlayers[0].readConectedPlayerSnap(gameData);
+                connectedPlayers[0].readProcessEnemiesHealth(gameData);
             }
         }
         else

@@ -81,6 +81,19 @@ public:
 		hobbitProcessAnalyzer->writeData(rotationYAddress, newRotation);
 	}
 
+	uint32_t getHealth() {
+		//TO DO
+		//return current health of the NPC
+		return 0;
+	}
+	void setHealth(uint32_t newHealth) {
+		//TO DO
+		//set health of the NPC
+	}
+	uint64_t getGUID()
+	{
+		return guid;
+	}
 
 	void setPositionX(float newPosition)
 	{

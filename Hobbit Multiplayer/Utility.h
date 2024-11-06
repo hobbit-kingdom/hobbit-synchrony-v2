@@ -46,7 +46,8 @@ void pushTypeToVector(const T& value, std::vector<uint8_t>& myVector) {
 enum class DataLabel {
     SERVER = 0,
     CONNECTED_PLAYER_SNAP = 1,
-    CONNECTED_PLAYER_LEVEL = 2
+    CONNECTED_PLAYER_LEVEL = 2,
+    ENEMIES_HEALTH = 3
 };
 
 // Structs for message handling
