@@ -98,6 +98,7 @@ public:
 		std::cout << "WARNING: Couldn't find " << guid << " GUID in the Game Object Stack" << std::endl;
 		return 0;
 	}
+
 	template <typename T>
 	uint32_t findGameObjByPattern(T pattern, uint32_t shift)
 	{
@@ -123,7 +124,7 @@ public:
 		return 0;
 	}
 	template <typename T>
-	uint32_t findGameObjByPattern(const std::vector<T>& data, uint32_t shift)
+	uint32_t findGameObjByPattern(const std::vector<T>& pattern, uint32_t shift)
 	{
 		if (!isProcessSet()) return 0;
 
@@ -136,8 +137,8 @@ public:
 			if (objAddrs != 0)
 			{
 				uint32_t patternAddrs = objAddrs + shift;
-				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), data.size() * sizeof(T));
-				if (memcmp(objPattern.data(), data.data(), data.size()) == 0)
+				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), pattern.size() * sizeof(T));
+				if (memcmp(objPattern.data(), pattern.data(), pattern.size()) == 0)
 				{
 					return objAddrs;
 				}
@@ -145,13 +146,14 @@ public:
 		}
 
 		std::cout << "WARNING: Couldn't find ";
-		for (T e : data) std::cout << e << "_";
+		for (T e : pattern) std::cout << e << "_";
 		std::cout << " Pattern in the Game Object Stack" << std::endl;
 
 		return 0;
 	}
+	
 	template <typename T>
-	std::vector<uint32_t> findAllGameObjByPattern(const std::vector<T>& data, uint32_t shift)
+	std::vector<uint32_t> findAllGameObjByPattern(T pattern, uint32_t shift)
 	{
 		if (!isProcessSet()) return std::vector<uint32_t>(0);
 
@@ -166,8 +168,8 @@ public:
 			if (objAddrs != 0)
 			{
 				uint32_t patternAddrs = objAddrs + shift;
-				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), data.size() * sizeof(T));
-				if (memcmp(objPattern.data(), data.data(), data.size()) == 0)
+				T objPattern = readData<T>(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs));
+				if (objPattern == pattern)
 				{
 					gameObjs.push_back(objStackAddress);
 				}
@@ -177,14 +179,48 @@ public:
 		if (gameObjs.size() == 0)
 		{
 			std::cout << "WARNING: Couldn't find ";
-			for (T e : data) std::cout << e << "_";
+			for (T e : pattern) std::cout << e << "_";
 			std::cout << " Pattern in the Game Object Stack" << std::endl;
 		}
 
 		return gameObjs;
 	}
-	// TO DO
-	// what does it do exaactly, is it usefull?
+	template <typename T>
+	std::vector<uint32_t> findAllGameObjByPattern(const std::vector<T>& pattern, uint32_t shift)
+	{
+		if (!isProcessSet()) return std::vector<uint32_t>(0);
+
+		std::vector<uint32_t> gameObjs;
+
+		std::lock_guard<std::mutex> lock(objectStackMutex);
+
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
+		{
+			uint32_t objStackAddress = objectStackAddress + offset;
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
+			if (objAddrs != 0)
+			{
+				uint32_t patternAddrs = objAddrs + shift;
+				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), pattern.size() * sizeof(T));
+				if (memcmp(objPattern.data(), pattern.data(), pattern.size()) == 0)
+				{
+					gameObjs.push_back(objStackAddress);
+				}
+			}
+		}
+
+		if (gameObjs.size() == 0)
+		{
+			std::cout << "WARNING: Couldn't find ";
+			for (T e : pattern) std::cout << e << "_";
+			std::cout << " Pattern in the Game Object Stack" << std::endl;
+		}
+
+		return gameObjs;
+	}
+	
+
+
 	std::unordered_map<uint32_t, std::vector<uint8_t>> readAllGameObjByPattern(size_t dataSize, uint32_t shift)
 	{
 		if (!isProcessSet()) return std::unordered_map<uint32_t, std::vector<uint8_t>>(0);
@@ -204,6 +240,32 @@ public:
 			}
 		}
 
+		return gameObjs;
+	}
+	template <typename T, typename P>
+	std::vector<T> findReadAllGameObjByPattern(P pattern, uint32_t patternShift, uint32_t readShift)
+	{
+
+		if (!isProcessSet()) return std::vector<T>();
+		std::vector<T>  gameObjs;
+
+		std::lock_guard<std::mutex> lock(objectStackMutex);
+
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
+			uint32_t objStackAddress = objectStackAddress + offset;
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
+			if (objAddrs != 0)
+			{
+				uint32_t patternAddrs = objAddrs + patternShift;
+				P objPattern = readData<P>(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs));
+				if (objPattern == pattern)
+				{
+					patternAddrs = objAddrs + readShift;
+					T objPattern = readData<T>(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs));
+					gameObjs.push_back(objPattern);
+				}
+			}
+		}
 		return gameObjs;
 	}
 

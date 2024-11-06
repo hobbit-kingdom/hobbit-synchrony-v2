@@ -86,7 +86,7 @@ public:
         while (!hurtEnemies.empty())
         {
             NPC enemy; 
-            enemy.setNCP(hurtEnemies.front().first, hobbitProcessAnalyzer);
+            enemy.setNCP(hurtEnemies.front().first);
             enemy.setHealth(hurtEnemies.front().second);
             hurtEnemies.pop();
         }
@@ -103,6 +103,7 @@ public:
     void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)
     {
         hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
+        npc.setHobbitProcessAnalyzer(&newHobbitProcessAnalyzer);
     }
 };
 

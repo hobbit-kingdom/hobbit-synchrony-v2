@@ -48,7 +48,7 @@ public:
     }
     bool isOnLevel()
     {
-        return   (!!hobitProcessAnalyzer.readData<bool>(0x007A59C8) && !isLevelLoading);
+        return   (!!hobitProcessAnalyzer.readData<bool>(0x007A59C8) && isLevelLoaded && !isLevelEnded);
     }
     bool isGameRunning()
     {
@@ -168,8 +168,7 @@ private:
     }
     void updateLevelState()
     {
-        if (!isGameRunning())
-            return;
+      
 
         // read instances of game (current level, etc.)
         currentState = hobitProcessAnalyzer.readData<uint32_t>(0x00762B58); // 0x00762B58: game state address
@@ -182,7 +181,7 @@ private:
 
         if (wasLevelEnded != isLevelEnded && isLevelEnded)
             eventExitLevel();
-        if (wasLevelLoaded != isLevelLoaded && isLevelLoaded)
+        if (wasLevelLoaded != isLevelLoaded && isLevelLoaded && !isLevelEnded)
             eventEnterNewLevel();
 
         previousState = !!currentState;
@@ -196,6 +195,11 @@ private:
     {
         while (!stopThread)
         {
+            if (!isGameRunning())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                continue;
+            }
             updateGameState();
             updateLevelState();
 

@@ -66,7 +66,7 @@ private:
     void onExitLevel() { processMessages = false; }
 
     void onOpenGame();
-    void onCloseGame() { processMessages = false; }
+    void onCloseGame() { processMessages = false; stop(); }
 
     void onClientListUpdate(const std::queue<uint8_t>&);
 
@@ -114,6 +114,7 @@ int HobbitClient::start(const std::string& ip) {
 void HobbitClient::stop() {
     running = false;
     client.stop();
+    hobbitGameManager.stop();
 
     if (updateThread.joinable()) {
         updateThread.join();
@@ -121,9 +122,17 @@ void HobbitClient::stop() {
 }
 void HobbitClient::update() {
     while (running){
-        if (!hobbitGameManager.isOnLevel() || !processMessages)
+        if (processMessages)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            if (!hobbitGameManager.isOnLevel())
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                continue;
+            }
+        }
+        else 
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             continue;
         }
         readMessage();
@@ -241,9 +250,8 @@ void HobbitClient::onEnterNewLevel() {
 
     mainPlayer.readPtrs();
     for (int i = 0; i < MAX_PLAYERS; ++i)
-    {
-        connectedPlayers[i].npc.setNCP(guids[i], &hobbitGameManager.getHobbitProcessAnalyzer());
-    }
+        connectedPlayers[i].npc.setNCP(guids[i]);
+
     processMessages = true;
 }
 void HobbitClient::onOpenGame()

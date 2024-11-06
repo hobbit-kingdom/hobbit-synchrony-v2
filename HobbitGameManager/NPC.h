@@ -9,11 +9,9 @@ public:
 	// Constructors
 	NPC()	{
 	}
-	void setNCP(uint64_t GUID, HobbitProcessAnalyzer *newHobbitProcessAnalyzer)
+	void setNCP(uint64_t GUID)
 	{
 		guid = GUID;
-		hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
-
 		// Constructor message
 		std::cout << "~CreateNPC" << std::endl;
 		hobbitProcessAnalyzer->updateObjectStackAddress();
@@ -25,6 +23,10 @@ public:
 
 		// end Constructor message
 		std::cout << std::endl;
+	}
+	static void setHobbitProcessAnalyzer(HobbitProcessAnalyzer* newHobbitProcessAnalyzer)
+	{
+		hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
 	}
 	// Returns object pointer
 	uint32_t getObjectPtr() { 
@@ -156,7 +158,7 @@ private:
 
 	// GUID of object
 	uint64_t guid;
-	HobbitProcessAnalyzer* hobbitProcessAnalyzer;
+	static HobbitProcessAnalyzer* hobbitProcessAnalyzer;
 	// Sets objects pointer of the NPC
 	void setObjectPtrByGUID(uint64_t guid)
 	{

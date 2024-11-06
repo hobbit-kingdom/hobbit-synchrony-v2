@@ -36,7 +36,7 @@ class MainPlayer {
     float bilboLastAnimFrame;
     const uint32_t X_POSITION_PTR = 0x0075BA3C;
 
-    std::vector<std::pair<NPC, NPC>> enemies; //before and after
+    std::vector<std::pair<NPC, uint32_t>> enemies; //NPC and previous Health
 
 
     std::atomic<bool> processPackets;
@@ -65,9 +65,16 @@ public:
     void readPtrs() {
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
-
+        // TO DO
         //find all enemies in the level
-        //std::vector<std::pair<NPC, NPC>> enemies;
+        //std::vector<uint64_t> allEnemiesGUIDS = hobbitProcessAnalyzer->findReadAllGameObjByPattern<uint64_t, uint32_t>( 0xABCABCABC, 0xABCABCABC, 0x8); //put the values that indicate that thing
+        //
+        //
+        //for (const uint32_t& e : allEnemiesGUIDS) {
+        //    NPC npc;
+        //    npc.setNCP(e);
+        //    enemies.push_back(std::make_pair(npc, 0xFFFFFFFF));
+        //}
     }
 
 private:
@@ -114,15 +121,15 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (std::pair<NPC, NPC> npc : enemies)
+        for (std::pair<NPC, uint32_t> e : enemies)
         {
-            if (npc.first.getHealth() >= npc.second.getHealth())
+            if (e.second >= e.first.getHealth())
             {
-                pushTypeToVector(npc.second.getGUID(), dataVec);
-                dataVec[1] += sizeof(npc.second.getGUID());
+                pushTypeToVector(e.first.getGUID(), dataVec);
+                dataVec[1] += sizeof(e.first.getGUID());
 
-                pushTypeToVector(npc.second.getHealth(), dataVec);
-                dataVec[1] += sizeof(npc.second.getHealth());
+                pushTypeToVector(e.first.getHealth(), dataVec);
+                dataVec[1] += sizeof(e.first.getHealth());
                 ++enemisSend;
             }
         }
@@ -148,5 +155,7 @@ private:
         bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530);
         bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C);
 
+        for (std::pair<NPC, uint32_t> e : enemies)
+            e.second = e.first.getHealth();
     }
 };
