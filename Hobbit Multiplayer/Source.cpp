@@ -15,21 +15,21 @@ using namespace std;
 
 std::atomic<bool> ctrlXPressed(false);
 
-void checkForCtrlX() {
-	std::cout << "Press Ctrl + X to exit." << std::endl;
-
-	while (true) {
-		// Check if Ctrl is pressed
-		if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
-			// Check if X is pressed
-			if (GetAsyncKeyState('X') & 0x8000) {
-				ctrlXPressed.store(true); // Set the flag to true
-				break; // Exit the loop if Ctrl + X is pressed
-			}
-		}
-		Sleep(100); // Sleep for a short time to avoid busy waiting
-	}
-}
+//void checkForCtrlX() {
+//	std::cout << "Press Ctrl + X to exit." << std::endl;
+//
+//	while (true) {
+//		// Check if Ctrl is pressed
+//		if (GetAsyncKeyState(VK_CONTROL) & 0x8000) {
+//			// Check if X is pressed
+//			if (GetAsyncKeyState('X') & 0x8000) {
+//				ctrlXPressed.store(true); // Set the flag to true
+//				break; // Exit the loop if Ctrl + X is pressed
+//			}
+//		}
+//		Sleep(100); // Sleep for a short time to avoid busy waiting
+//	}
+//}
 
 int mainMenu()
 {
@@ -112,7 +112,7 @@ void serverClient()
 int main()
 {
 	// Start the Ctrl + X checking function in a separate thread
-	std::thread ctrlXThread(checkForCtrlX);
+	//std::thread ctrlXThread(checkForCtrlX);
 	do
 	{
 		if (ctrlXPressed) break;
@@ -135,7 +135,7 @@ int main()
 			break;
 		}
 	} while (true);
-	if(ctrlXThread.joinable())
-		ctrlXThread.join();
+	//if(ctrlXThread.joinable())
+	//	ctrlXThread.join();
 	return 0;
 }
