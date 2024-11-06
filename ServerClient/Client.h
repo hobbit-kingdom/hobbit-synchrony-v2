@@ -66,14 +66,14 @@ public:
     std::queue<uint8_t> getConnectedClients() { return connectedClients; }
     void notifyServerDown();
 private:
-    SOCKET serverSocket;
+    SOCKET serverSocket = 0;
 
     std::thread receiveThread;
     std::mutex messageMutex; // Mutex for thread-safe access to message containers
 
     bool isConnected;
 
-    uint8_t clientID;
+    uint8_t clientID = -1;
     std::queue<uint8_t> connectedClients; // Set of client IDs
 
     std::deque<BaseMessage> textMessages;
