@@ -48,7 +48,7 @@ public:
     }
     bool isOnLevel()
     {
-        return  isLevelLoaded;
+        return   (!!hobitProcessAnalyzer.readData<bool>(0x007A59C8, sizeof(uint32_t)) && !isLevelLoading);
     }
     bool isGameRunning()
     {
@@ -145,6 +145,7 @@ private:
     std::atomic<bool> isLevelLoading = false;
 
     std::atomic<bool> isLevelLoaded = false;
+    std::atomic<bool> wasLevelLoaded = false;
 
 
     void updateGameState()
@@ -175,17 +176,20 @@ private:
         currentLevel = hobitProcessAnalyzer.readData<uint32_t>(0x00762B5C, sizeof(uint32_t));  // 0x00762B5C: current level address
         isLevelEnded = !hobitProcessAnalyzer.readData<bool>(0x00760354, sizeof(uint32_t));  //0x00760354: is loaded level address
         isLevelLoading = hobitProcessAnalyzer.readData<bool>(0x0076035C, sizeof(uint32_t));  //0x0x0072F048: is loaded level address
-       
+
+        bool isLevelAssigned = !!hobitProcessAnalyzer.readData<bool>(0x007A59C8, sizeof(uint32_t));  //0x0x0072F048: is loaded level address
+        isLevelLoaded = (isLevelAssigned && !isLevelLoading);
 
         if (wasLevelEnded != isLevelEnded && isLevelEnded)
             eventExitLevel();
-        if (wasLevelLoading && !isLevelLoading)
+        if (wasLevelLoaded != isLevelLoaded && isLevelLoaded)
             eventEnterNewLevel();
 
         previousState = !!currentState;
         previousLevel = !!currentLevel;
         wasLevelEnded = !!isLevelEnded;
         wasLevelLoading = !!isLevelLoading;
+        wasLevelLoaded = !!isLevelLoaded;
     }
 
     void update()
