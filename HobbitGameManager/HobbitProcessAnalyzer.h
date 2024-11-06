@@ -33,6 +33,21 @@ public:
 
 		return (hobbitProcess != nullptr);
 	}
+	bool isGameRunning()
+	{
+		return  getProcess("Meridian.exe") != nullptr;
+	}
+
+	template <typename T>
+	std::vector<uint32_t> searchProcessMemory(T pattern)
+	{
+		return ProcessAnalyzerTypeWrapped::searchProcessMemory(hobbitProcess, convertToUint8Vector(pattern));
+	}
+	template <typename T>
+	std::vector<uint32_t> searchProcessMemory(const std::vector<T>& pattern)
+	{
+		return ProcessAnalyzerTypeWrapped::searchProcessMemory(hobbitProcess, convertToUint8Vector(pattern));
+	}
 
 	template <typename T>
 	T readData(uint32_t address)
@@ -67,10 +82,13 @@ public:
 		try {
 			std::lock_guard<std::mutex> lock(objectStackMutex);
 			objectStackAddress = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F648));
+			objectStackSize = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F660));
+
 		}
 		catch (const std::runtime_error& e) {
 			std::lock_guard<std::mutex> lock(objectStackMutex);
 			objectStackAddress = 0;
+			objectStackSize = 0;
 			std::cerr << "ERROR: Failed to read Object Stack Address from memory address 0x0076F648. Exception: " << e.what() << std::endl;
 		}
 	}
@@ -81,7 +99,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE){
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE){
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
@@ -106,7 +124,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
@@ -130,7 +148,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
@@ -161,7 +179,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
@@ -178,9 +196,7 @@ public:
 
 		if (gameObjs.size() == 0)
 		{
-			std::cout << "WARNING: Couldn't find ";
-			for (T e : pattern) std::cout << e << "_";
-			std::cout << " Pattern in the Game Object Stack" << std::endl;
+			std::cout << "WARNING: Couldn't find "<< pattern << " Pattern in the Game Object Stack" << std::endl;
 		}
 
 		return gameObjs;
@@ -194,7 +210,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
@@ -219,29 +235,7 @@ public:
 		return gameObjs;
 	}
 	
-
-
-	std::unordered_map<uint32_t, std::vector<uint8_t>> readAllGameObjByPattern(size_t dataSize, uint32_t shift)
-	{
-		if (!isProcessSet()) return std::unordered_map<uint32_t, std::vector<uint8_t>>(0);
-
-		std::unordered_map<uint32_t, std::vector<uint8_t>>  gameObjs(0);
-
-		std::lock_guard<std::mutex> lock(objectStackMutex);
-
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
-		{
-			uint32_t objStackAddress = objectStackAddress + offset;
-			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
-			if (objAddrs != 0)
-			{
-				uint32_t patternAddrs = objAddrs + shift;
-				gameObjs[objStackAddress] = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), dataSize);
-			}
-		}
-
-		return gameObjs;
-	}
+	
 	template <typename T, typename P>
 	std::vector<T> findReadAllGameObjByPattern(P pattern, uint32_t patternShift, uint32_t readShift)
 	{
@@ -251,7 +245,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
@@ -268,6 +262,7 @@ public:
 		}
 		return gameObjs;
 	}
+	template <typename T, typename P>
 
 	std::vector<uint32_t> getAllObjects() {
 		if (!isProcessSet()) return std::vector<uint32_t>(0);
@@ -276,7 +271,7 @@ public:
 
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
 			if (objAddrs != 0)
@@ -288,28 +283,12 @@ public:
 		return foundObjects;
 	}
 
-	bool isGameRunning()
-	{
-		return  getProcess("Meridian.exe") != nullptr;
-	}
-
-
-	template <typename T>
-	std::vector<uint32_t> searchProcessMemory(T pattern)
-	{
-		return ProcessAnalyzerTypeWrapped::searchProcessMemory(hobbitProcess, convertToUint8Vector(pattern));
-	}
-	template <typename T>
-	std::vector<uint32_t> searchProcessMemory(const std::vector<T>& pattern)
-	{
-		return ProcessAnalyzerTypeWrapped::searchProcessMemory(hobbitProcess, convertToUint8Vector(pattern));
-	}
 
 private:
 
 	HANDLE hobbitProcess = 0;
 
-	const uint32_t OBJECT_STACK_SIZE = 0xFFFF;
+	uint32_t objectStackSize = 0x0;
 	const uint32_t OBJECT_PTR_SIZE = 0x14;
 	uint32_t objectStackAddress = 0;
 
