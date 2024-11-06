@@ -3,6 +3,7 @@
 #pragma warning(disable : 4312)
 #pragma warning(disable : 4267)
 #include <mutex>
+#include <iomanip>
 #ifdef _WIN32
 #include <winsock2.h>   // Ensure winsock2.h is included before Windows.h
 #include <Windows.h>
@@ -79,7 +80,6 @@ public:
 		try {
 			std::lock_guard<std::mutex> lock(objectStackMutex);
 			objectStackAddress = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F648), 4);
-			objectStackSize = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(0x0076F650), 4);
 		}
 		catch (const std::runtime_error& e) {
 			std::lock_guard<std::mutex> lock(objectStackMutex);
@@ -96,11 +96,10 @@ public:
 			return 0;
 		}
 
-		static const size_t jumpSize = 0x14;
 		std::lock_guard<std::mutex> lock(objectStackMutex);
-		size_t offset = 0;
-		while(true){
-		//for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
+		//size_t offset = 0;
+		//while(true){
+		for (size_t offset = 0; offset <= 0xFFFF * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE){
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
 			if (objAddrs != 0)
@@ -109,12 +108,11 @@ public:
 				uint64_t objGUID = readData<uint64_t>(hobbitProcess, reinterpret_cast<LPVOID>(guidAddrs), 8);
 				if (objGUID == guid)
 				{
-					std::cout << "Found GUID at ObjectAddres: " << offset / 0x14 << std::endl;
-					std::cout << "Found GUID at objectStackSize: " << objectStackSize << std::endl;
+					std::cout << "Found GUID at ObjectAddres: " << std::hex <<offset / 0x14 << std::endl;
+					std::cout << "Found GUID at objectStackSize: " << OBJECT_STACK_SIZE << std::endl;
 					return objAddrs;
 				}
 			}
-			offset += jumpSize;
 		}
 
 		std::cout << "WARNING: Couldn't find " << guid << " GUID in the Game Object Stack" << std::endl;
@@ -129,10 +127,9 @@ public:
 			return 0;
 		}
 
-		static const size_t jumpSize = 0x14;
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
@@ -161,10 +158,9 @@ public:
 
 		std::vector<uint32_t> gameObjs;
 
-		static const size_t jumpSize = 0x14;
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
@@ -190,10 +186,9 @@ public:
 		}
 		std::unordered_map<uint32_t, std::vector<uint8_t>>  gameObjs(0);
 
-		static const size_t jumpSize = 0x14;
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize)
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE)
 		{
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
@@ -216,10 +211,9 @@ public:
 
 		std::vector<uint32_t> foundObjects;
 
-		static const size_t jumpSize = 0x14;
 		std::lock_guard<std::mutex> lock(objectStackMutex);
 
-		for (size_t offset = 0; offset <= objectStackSize * jumpSize; offset += jumpSize) {
+		for (size_t offset = 0; offset <= OBJECT_STACK_SIZE * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
 			uint32_t objStackAddress = objectStackAddress + offset;
 			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress), 4);
 			if (objAddrs != 0)
@@ -252,7 +246,8 @@ private:
 
 	HANDLE hobbitProcess = 0;
 
-	uint32_t objectStackSize = 0x0;
+	const uint32_t OBJECT_STACK_SIZE = 0xFFFF;
+	const uint32_t OBJECT_PTR_SIZE = 0x14;
 	uint32_t objectStackAddress = 0;
 
 	std::mutex objectStackMutex;
