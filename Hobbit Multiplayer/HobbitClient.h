@@ -37,7 +37,7 @@ public:
     int start(const std::string& ip);
     void stop();
 
-    bool isRunning() {return running;}
+    bool isRunning() { return running; }
 
 private:
     Client client;
@@ -61,7 +61,7 @@ private:
     void readMessage();
     void readGameMessage(int senderID, std::queue<uint8_t>& gameData);
     void writeMessage();
-    
+
     void onEnterNewLevel();
     void onExitLevel() { processMessages = false; }
 
@@ -88,7 +88,7 @@ int HobbitClient::start(const std::string& ip) {
         });
 
     if (client.start(serverIp)) return 1;
-    
+
     guids = getPlayersNpcGuid();
 
     while (!hobbitGameManager.isGameRunning()) {
@@ -105,10 +105,10 @@ int HobbitClient::start(const std::string& ip) {
     hobbitGameManager.start();
 
     onOpenGame();
-    
+
     updateThread = std::thread(&HobbitClient::update, this);
     return 0;
-    
+
 }
 
 void HobbitClient::stop() {
@@ -121,7 +121,7 @@ void HobbitClient::stop() {
     }
 }
 void HobbitClient::update() {
-    while (running){
+    while (running) {
         if (processMessages)
         {
             if (!hobbitGameManager.isOnLevel())
@@ -130,7 +130,7 @@ void HobbitClient::update() {
                 continue;
             }
         }
-        else 
+        else
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             continue;
@@ -178,7 +178,7 @@ void HobbitClient::readMessage() {
 void HobbitClient::writeMessage() {
 
     std::vector<BaseMessage> messages;
-    
+
     std::vector<BaseMessage> mainPlayerMsg = mainPlayer.write();
     std::vector<BaseMessage> connectedPlayerMsg = mainPlayer.write();
 
@@ -189,9 +189,9 @@ void HobbitClient::writeMessage() {
     {
         e.senderID = client.getClientID();
 
-        if (e.message.size() > 0) 
+        if (e.message.size() > 0)
             client.sendMessage(e);
-    }    
+    }
 }
 void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) {
     std::cout << "Received Message from client " << senderID << std::endl;
@@ -259,10 +259,10 @@ void HobbitClient::onOpenGame()
     processMessages = false;
     mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
 
-    for(ConnectedPlayer connectedPlayer : connectedPlayers)
+    for (ConnectedPlayer connectedPlayer : connectedPlayers)
         connectedPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
-    
-    
+
+
     if (hobbitGameManager.isOnLevel())
         onEnterNewLevel();
 }
@@ -276,7 +276,7 @@ void HobbitClient::onClientListUpdate(const std::queue<uint8_t>&) {
         connectedPlayers[i].id = connectedClients.empty() ? -1 : connectedClients.front();
         if (!connectedClients.empty()) connectedClients.pop(); // Remove the front element from the queue
     }
-    
+
 }
 std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
     std::ifstream file;

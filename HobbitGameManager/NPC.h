@@ -5,7 +5,7 @@
 class NPC
 {
 public:
-
+	static HobbitProcessAnalyzer* hobbitProcessAnalyzer;
 	// Constructors
 	NPC();
 	void setNCP(uint64_t GUID);
@@ -47,6 +47,8 @@ public:
 	void setAnimation(uint32_t newAnimation);
 	void setAnimFrames(float newAnimFrame, float newLastAnimFrame);
 
+	void setWeapon(uint32_t newWeapon);
+
 private:
 	// Pointers
 	uint32_t objectAddress = 0;					// Object pointer
@@ -56,7 +58,6 @@ private:
 
 	// GUID of object
 	uint64_t guid = 0;
-	static HobbitProcessAnalyzer* hobbitProcessAnalyzer;
 	// Sets objects pointer of the NPC
 	void setObjectPtrByGUID(uint64_t guid);
 	// Sets position X pointers of the NPC 

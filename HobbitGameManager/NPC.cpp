@@ -145,7 +145,12 @@ void NPC::setAnimFrames(float newAnimFrame, float newLastAnimFrame)
 	hobbitProcessAnalyzer->writeData(animationAddress + 0x14, newLastAnimFrame);
 }
 
+void NPC::setWeapon(uint32_t newWeapon)
+{
 
+	uint32_t ObjectPtr = getObjectPtr();
+	hobbitProcessAnalyzer->writeData(ObjectPtr + 0x260, newWeapon);
+}
 //private
 
 // Sets objects pointer of the NPC

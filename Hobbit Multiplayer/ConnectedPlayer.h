@@ -29,6 +29,7 @@ class ConnectedPlayer {
     Vector3 position, rotation;
 
     uint32_t level;
+    int8_t weapon;
 
     std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
 public:
@@ -42,6 +43,7 @@ public:
         position.y = convertQueueToType<float>(gameData);
         position.z = convertQueueToType<float>(gameData);
         rotation.y = convertQueueToType<float>(gameData);
+        weapon = convertQueueToType<int8_t>(gameData);
     }
     void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
     uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
@@ -71,6 +73,35 @@ public:
         npc.setRotationY(rotation.y);
         npc.setAnimation(animation);
         npc.setAnimFrames(animFrame, lastAnimFrame);
+
+        if (weapon == -1)
+        {
+            uint64_t guidNone = 0x0D8AD910E885100D;
+            //uint64_t guidNone1 = std::stoull(guidNone, nullptr, 16);
+            uint32_t addrsGuidNone = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidNone);
+            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidNone + 0x260));
+        }
+        else if (weapon == 0)
+        {
+            uint64_t guidSting = 0x0D8AD910E885100B;
+            //uint64_t guidSting1 = std::stoull(guidSting, nullptr, 16);
+            uint32_t addrsGuidSting = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidSting);
+            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidSting + 0x260));
+        }
+        else if (weapon == 1)
+        {
+            uint64_t guidStaff = 0x0D8AD910E885100A;
+            //uint64_t guidStaff1 = std::stoull(guidStaff, nullptr, 16);
+            uint32_t addrsGuidStaff = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidStaff);
+            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidStaff + 0x260));
+        }
+        else if (weapon == 3)
+        {
+            uint64_t guidStone = 0x0D8AD910E885100C;
+            //uint64_t guidStone1 = std::stoull(guidStone, nullptr, 16);
+            uint32_t addrsGuidStone = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidStone);
+            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidStone + 0x260));
+        }
 
         // Display the data
         std::cout << "\033[33m";

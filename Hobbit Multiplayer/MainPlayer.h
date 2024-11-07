@@ -36,10 +36,12 @@ class MainPlayer {
 
     float bilboAnimFrame;
     float bilboLastAnimFrame;
+
+    int8_t bilboWeapon;
+
     const uint32_t X_POSITION_PTR = 0x0075BA3C;
 
     std::vector<std::pair<uint32_t, float>> enemies; //NPC and previous Health
-
 
     std::atomic<bool> processPackets;
 
@@ -82,6 +84,9 @@ public:
             std::cout << std::hex << e << " || "  <<std::dec << hobbitProcessAnalyzer->readData<float>(e + 0x290) << std::endl;
             enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290)));
         }
+
+
+
         std::cout << enemies.size() << " enemies" << std::endl;
         std::cout << "End of searching for Enemies" << std::endl << "\033[0m";
 
@@ -111,11 +116,13 @@ private:
         pushTypeToVector(rotation.y, dataVec);
         dataVec[1] += sizeof(rotation.y);
 
+        pushTypeToVector(bilboWeapon, dataVec);
+        dataVec[1] += sizeof(bilboWeapon);
         // Convert vector to queue
-        for (const int& element : dataVec) {
+        for (const uint8_t& element : dataVec) {
             snap.message.push(element);
         }
-
+        //0x260
         std::cout << std::dec;
         std::cout << "Sending: X " << position.x << ", Y " << position.y << ", Z " << position.z << ", R " << rotation.y << ", A " << animation << std::endl;
         return snap;
@@ -178,5 +185,7 @@ private:
 
         bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530);
         bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C);
+
+        bilboWeapon = hobbitProcessAnalyzer->readData<int8_t>(0x0075C738);
     }
 };
