@@ -23,7 +23,7 @@
 
 // Player classes
 class ConnectedPlayer {
-    HobbitProcessAnalyzer* hobbitProcessAnalyzer;
+    HobbitProcessAnalyzer *hobbitProcessAnalyzer;
     uint32_t animation;
     float animFrame, lastAnimFrame;
     Vector3 position, rotation;
@@ -33,8 +33,18 @@ class ConnectedPlayer {
 
     std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
 public:
+    ConnectedPlayer() 
+    {
+        
+    }
+    void setHobbitProcessAnalyzer(HobbitGameManager& initialHobbitGameManager)
+    {
+        hobbitProcessAnalyzer = initialHobbitGameManager.getHobbitProcessAnalyzer();
+        npc.setHobbitProcessAnalyzer(hobbitProcessAnalyzer);
+    }
     int id = -1;
     NPC npc;
+
     void readConectedPlayerSnap(std::queue<uint8_t>& gameData) {
         animation = convertQueueToType<uint32_t>(gameData);
         animFrame = convertQueueToType<float>(gameData);
@@ -81,30 +91,26 @@ public:
         if (weapon == -1)
         {
             uint64_t guidNone = 0x0D8AD910E885100D;
-            //uint64_t guidNone1 = std::stoull(guidNone, nullptr, 16);
-            uint32_t addrsGuidNone = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidNone);
-            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidNone + 0x260));
+            uint32_t addrsGuidNone = hobbitProcessAnalyzer->findGameObjByGUID(guidNone);
+            npc.setWeapon(hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidNone + 0x260));
         }
         else if (weapon == 0)
         {
             uint64_t guidSting = 0x0D8AD910E885100B;
-            //uint64_t guidSting1 = std::stoull(guidSting, nullptr, 16);
-            uint32_t addrsGuidSting = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidSting);
-            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidSting + 0x260));
+            uint32_t addrsGuidSting = hobbitProcessAnalyzer->findGameObjByGUID(guidSting);
+            npc.setWeapon(hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidSting + 0x260));
         }
         else if (weapon == 1)
         {
             uint64_t guidStaff = 0x0D8AD910E885100A;
-            //uint64_t guidStaff1 = std::stoull(guidStaff, nullptr, 16);
-            uint32_t addrsGuidStaff = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidStaff);
+            uint32_t addrsGuidStaff = hobbitProcessAnalyzer->findGameObjByGUID(guidStaff);
             npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidStaff + 0x260));
         }
         else if (weapon == 3)
         {
             uint64_t guidStone = 0x0D8AD910E885100C;
-            //uint64_t guidStone1 = std::stoull(guidStone, nullptr, 16);
-            uint32_t addrsGuidStone = NPC::hobbitProcessAnalyzer->findGameObjByGUID(guidStone);
-            npc.setWeapon(NPC::hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidStone + 0x260));
+            uint32_t addrsGuidStone = hobbitProcessAnalyzer->findGameObjByGUID(guidStone);
+            npc.setWeapon(hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidStone + 0x260));
         }
 
         // Display the data
@@ -129,15 +135,15 @@ public:
             std::cout <<std::hex <<hurtEnemies.front().first << std::dec<< " " << hurtEnemies.front().second;
             std::cout << "\033[0m";
             //find by guid
-            uint32_t objAddrs = NPC::hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
+            uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
 
             //check if the object exist
             if (objAddrs != 0)
             {
-                float health = NPC::hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
+                float health = hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
                 if (health > hurtEnemies.front().second)
                 {
-                    NPC::hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, hurtEnemies.front().second);
+                    hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, hurtEnemies.front().second);
                     hurtEnemies.pop();
                     continue;
                 }
@@ -153,12 +159,6 @@ public:
         return std::vector<BaseMessage>();
     }
 
-    void clear() { id = -1; }
-
-    void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)
-    {
-        hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
-        npc.setHobbitProcessAnalyzer(&newHobbitProcessAnalyzer);
-    }
+    void clear() { id = -1; }    
 };
 

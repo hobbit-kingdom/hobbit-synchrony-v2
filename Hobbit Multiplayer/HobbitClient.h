@@ -30,7 +30,13 @@ class HobbitClient {
 public:
     HobbitClient(std::string initialServerIp = "")
         : serverIp(std::move(initialServerIp)), running(false), processMessages(false) {
+        for (auto& e :  connectedPlayers)
+        {
+            e.setHobbitProcessAnalyzer(hobbitGameManager);
+        }
+        mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager);
     }
+
     ~HobbitClient() { stop(); }
 
     int start();
@@ -55,8 +61,8 @@ private:
 
     static constexpr int MAX_PLAYERS = 7;
     ConnectedPlayer connectedPlayers[MAX_PLAYERS];
-
     MainPlayer mainPlayer;
+
     void update();
     void readMessage();
     void readGameMessage(int senderID, std::queue<uint8_t>& gameData);
@@ -238,30 +244,24 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
 
 void HobbitClient::onEnterNewLevel() {
 
+    hobbitGameManager.getHobbitProcessAnalyzer()->updateObjectStackAddress();
+    
+    
     if (guids.size() == 0)
         guids = getPlayersNpcGuid();
 
-    hobbitGameManager.getHobbitProcessAnalyzer().updateObjectStackAddress();
-
-    mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
-
-    for (ConnectedPlayer connectedPlayer : connectedPlayers)
-        connectedPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
+    for (int i = 0; i < MAX_PLAYERS; ++i)
+    {
+        connectedPlayers[i].npc.setNCP(guids[i]);
+    }
 
     mainPlayer.readPtrs();
-    for (int i = 0; i < MAX_PLAYERS; ++i)
-        connectedPlayers[i].npc.setNCP(guids[i]);
 
     processMessages = true;
 }
 void HobbitClient::onOpenGame()
 {
     processMessages = false;
-    mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
-
-    for (ConnectedPlayer connectedPlayer : connectedPlayers)
-        connectedPlayer.setHobbitProcessAnalyzer(hobbitGameManager.getHobbitProcessAnalyzer());
-
 
     if (hobbitGameManager.isOnLevel())
         onEnterNewLevel();

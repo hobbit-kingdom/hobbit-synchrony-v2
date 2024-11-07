@@ -70,9 +70,9 @@ public:
     }
 
 
-    HobbitProcessAnalyzer& getHobbitProcessAnalyzer()
+    HobbitProcessAnalyzer* getHobbitProcessAnalyzer()
     {
-        return hobitProcessAnalyzer;
+        return &hobitProcessAnalyzer;
     }
 
 private:

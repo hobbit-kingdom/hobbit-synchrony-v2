@@ -46,6 +46,13 @@ class MainPlayer {
     std::atomic<bool> processPackets;
 
 public:
+    MainPlayer()
+    {
+    }
+    void setHobbitProcessAnalyzer(HobbitGameManager& initialHobbitGameManager)
+    {
+        hobbitProcessAnalyzer = initialHobbitGameManager.getHobbitProcessAnalyzer();
+    }
     void readPlayer(std::queue<uint8_t>& gameData)
     {
         newLevel = convertQueueToType<uint32_t>(gameData);
@@ -66,10 +73,6 @@ public:
         return messages;
     }
 
-    void setHobbitProcessAnalyzer(HobbitProcessAnalyzer &newHobbitProcessAnalyzer)
-    {
-        hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
-    }
     void readPtrs() {
         
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
