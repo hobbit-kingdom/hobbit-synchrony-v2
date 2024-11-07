@@ -74,15 +74,19 @@ public:
 
         std::cout << "Searching for Enemies" << std::endl;
         std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint64_t>(0x0000000200000002, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
-        std::cout << "Found " << allEnemieAddrs.size() << " enemis" << std::endl;
         for (uint32_t e : allEnemieAddrs)
         {
             NPC npc;
+            if (0x04004232 != hobbitProcessAnalyzer->readData<uint32_t>(e + 0x10))
+                continue;
+
             uint64_t guid = hobbitProcessAnalyzer->readData<uint64_t>(e + 0x8);
+
                 npc.setNCP(guid);
                 enemies.push_back(std::make_pair(npc, npc.getHealth()));
         }
-        std::cout << "End of searching for Enemies" << std::endl;
+        std::cout << "\033[33mFound " << enemies.size() << " enemis" << std::endl;
+        std::cout << "End of searching for Enemies" << std::endl << "\033[0m";
 
     }
 
@@ -135,7 +139,7 @@ private:
 
             if (enemies[i].second > enemies[i].first.getHealth())
             {
-                std::cout << "Enemy: " << enemies[i].first.getGUID();
+                std::cout << "Enemy: " << std::hex << enemies[i].first.getObjectPtr() << std::dec;
                 std::cout << "Before Health:" << enemies[i].second;
                 std::cout << "After Health:" << enemies[i].first.getHealth();
                 std::cout << std::endl;
@@ -159,9 +163,11 @@ private:
         for (const int& element : dataVec) {
             msg.message.push(element);
         }
-        std::cout << "\033[31mSending: Enemies " << enemisSend <<"\033[0m" << std::endl;
         if (enemisSend > 0)
+        {
+            std::cout << "\033[31mSending: Enemies " << enemisSend << "\033[0m" << std::endl;
             return msg;
+        }
         else
             return BaseMessage();
     }

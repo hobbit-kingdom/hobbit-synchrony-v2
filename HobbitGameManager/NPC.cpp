@@ -23,6 +23,7 @@ void NPC::setNCP(uint64_t GUID)
 	setRotationYPtr();
 	setAnimationPtr();
 
+	float a = getHealth();
 	// end Constructor message
 	std::cout << std::endl;
 }
