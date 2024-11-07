@@ -38,7 +38,7 @@ class MainPlayer {
     float bilboLastAnimFrame;
     const uint32_t X_POSITION_PTR = 0x0075BA3C;
 
-    std::vector<std::pair<NPC, float>> enemies; //NPC and previous Health
+    std::vector<std::pair<uint32_t, float>> enemies; //NPC and previous Health
 
 
     std::atomic<bool> processPackets;
@@ -69,23 +69,20 @@ public:
         hobbitProcessAnalyzer = &newHobbitProcessAnalyzer;
     }
     void readPtrs() {
+        
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
-
-        std::cout << "Searching for Enemies" << std::endl;
+        enemies.clear();
+        std::cout << "\033[34mFound Searching for Enemies" << std::endl;
         std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint64_t>(0x0000000200000002, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
         for (uint32_t e : allEnemieAddrs)
         {
-            NPC npc;
             if (0x04004232 != hobbitProcessAnalyzer->readData<uint32_t>(e + 0x10))
                 continue;
-
-            uint64_t guid = hobbitProcessAnalyzer->readData<uint64_t>(e + 0x8);
-
-                npc.setNCP(guid);
-                enemies.push_back(std::make_pair(npc, npc.getHealth()));
+            std::cout << std::hex << e << " || "  <<std::dec << hobbitProcessAnalyzer->readData<float>(e + 0x290) << std::endl;
+            enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290)));
         }
-        std::cout << "\033[33mFound " << enemies.size() << " enemis" << std::endl;
+        std::cout << enemies.size() << " enemies" << std::endl;
         std::cout << "End of searching for Enemies" << std::endl << "\033[0m";
 
     }
@@ -134,29 +131,29 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for(int i = 0; i < enemies.size(); ++i)
+        for (int i = 0; i < enemies.size(); ++i)
         {
 
-            if (enemies[i].second > enemies[i].first.getHealth())
+            if (enemies[i].second > hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290))
             {
-                std::cout << "Enemy: " << std::hex << enemies[i].first.getObjectPtr() << std::dec;
+                std::cout << "Enemy: " << std::hex << enemies[i].first << std::dec;
                 std::cout << "Before Health:" << enemies[i].second;
-                std::cout << "After Health:" << enemies[i].first.getHealth();
+                std::cout << "After Health:" << hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
                 std::cout << std::endl;
                 
-                enemies[i].second = enemies[i].first.getHealth();
+                enemies[i].second = hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
                 //GUID
-                pushTypeToVector(enemies[i].first.getGUID(), dataVec);
-                dataVec[1] += sizeof(enemies[i].first.getGUID());
+                pushTypeToVector(hobbitProcessAnalyzer->readData<uint64_t>(enemies[i].first + 0x8), dataVec);
+                dataVec[1] += sizeof(uint64_t);
 
                 //Heath
-                pushTypeToVector(enemies[i].first.getHealth(), dataVec);
-                dataVec[1] += sizeof(enemies[i].first.getHealth());
+                pushTypeToVector(enemies[i].second, dataVec);
+                dataVec[1] += sizeof(float);
 
                 ++enemisSend;
             }
         }
-
+        
         dataVec[2] = enemisSend;//set enemies send
 
         // Convert vector to queue

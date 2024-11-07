@@ -9,6 +9,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ServerClient", "ServerClien
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HobbitGameManager", "HobbitGameManager\HobbitGameManager.vcxproj", "{B65392C7-3BDC-4606-8FF1-E2160FE8867D}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LogSystem", "LogSystem\LogSystem.vcxproj", "{4C528233-ACA8-414F-8896-23C5CA950DA0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -41,6 +43,14 @@ Global
 		{B65392C7-3BDC-4606-8FF1-E2160FE8867D}.Release|x64.Build.0 = Release|x64
 		{B65392C7-3BDC-4606-8FF1-E2160FE8867D}.Release|x86.ActiveCfg = Release|Win32
 		{B65392C7-3BDC-4606-8FF1-E2160FE8867D}.Release|x86.Build.0 = Release|Win32
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Debug|x64.ActiveCfg = Debug|x64
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Debug|x64.Build.0 = Debug|x64
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Debug|x86.ActiveCfg = Debug|Win32
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Debug|x86.Build.0 = Debug|Win32
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x64.ActiveCfg = Release|x64
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x64.Build.0 = Release|x64
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x86.ActiveCfg = Release|Win32
+		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

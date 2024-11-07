@@ -85,11 +85,25 @@ public:
         // Update Health of Enemies
         while (!hurtEnemies.empty())
         {
-            std::cout << "ENEMY HURT!!" << std::endl;
-            NPC enemy; 
+            if (hurtEnemies.front().first == 0 || hurtEnemies.front().second < 0)
+            {
+                hurtEnemies.pop();
+                continue;
+            }
+            std::cout << "\033[31mENEMY HURT!!  ";
+            std::cout <<std::hex <<hurtEnemies.front().first << std::dec<< " " << hurtEnemies.front().second;
+            std::cout << "\033[0m";
+            NPC enemy;
             enemy.setNCP(hurtEnemies.front().first);
+            if (enemy.getHealth() < hurtEnemies.front().second || enemy.getGUID() == 0)
+            {
+                hurtEnemies.pop();
+                continue;
+            }
+            
             enemy.setHealth(hurtEnemies.front().second);
             hurtEnemies.pop();
+
         }
     }
 
