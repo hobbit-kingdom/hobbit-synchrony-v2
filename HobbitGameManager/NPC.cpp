@@ -124,11 +124,11 @@ void NPC::setRotationY(float newRotation)
 void NPC::setHealth(float newHealth) {
 	//TO DO
 	// Set correct shfit from the heatlh
-	hobbitProcessAnalyzer->writeData(objectAddress + 0x270 + 0x5 * 0x4, newHealth);
+	hobbitProcessAnalyzer->writeData(objectAddress + 0x290, newHealth);
 }
 float NPC::getHealth() {
 	// Set correct shfit from the heatlh
-	 return hobbitProcessAnalyzer->readData<uint32_t>(objectAddress + 0x270 + 0x5*0x4);
+	 return hobbitProcessAnalyzer->readData<float>(objectAddress + 0x290);
 }
 
 

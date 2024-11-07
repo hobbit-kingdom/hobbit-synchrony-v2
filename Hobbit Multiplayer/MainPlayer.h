@@ -69,7 +69,7 @@ public:
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
 
         std::cout << "Searching for Enemies" << std::endl;
-        std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint8_t>(0x02, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
+        std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint64_t>(0x0000000200000002, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
         std::cout << "Found " << allEnemieAddrs.size() << " enemis" << std::endl;
         for (uint32_t e : allEnemieAddrs)
         {
@@ -126,10 +126,16 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (std::pair<NPC, float> e : enemies)
+        for (auto &e : enemies)
         {
             if (e.second > e.first.getHealth())
             {
+                std::cout << "Enemy: " << e.first.getGUID();
+                std::cout << "Before Health:" << e.second;
+                std::cout << "After Health:" << e.first.getHealth();
+                std::cout << std::endl;
+                
+                e.second = e.first.getHealth();
                 //GUID
                 pushTypeToVector(e.first.getGUID(), dataVec);
                 dataVec[1] += sizeof(e.first.getGUID());
@@ -162,8 +168,5 @@ private:
 
         bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530);
         bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C);
-
-        for (std::pair<NPC, uint32_t> e : enemies)
-            e.second = e.first.getHealth();
     }
 };
