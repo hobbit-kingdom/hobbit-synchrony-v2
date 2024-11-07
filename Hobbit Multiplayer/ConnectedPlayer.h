@@ -85,7 +85,7 @@ public:
         // Update Health of Enemies
         while (!hurtEnemies.empty())
         {
-            if (hurtEnemies.front().first == 0 || hurtEnemies.front().second < 0)
+            if (hurtEnemies.front().first == 0)
             {
                 hurtEnemies.pop();
                 continue;
@@ -93,15 +93,20 @@ public:
             std::cout << "\033[31mENEMY HURT!!  ";
             std::cout <<std::hex <<hurtEnemies.front().first << std::dec<< " " << hurtEnemies.front().second;
             std::cout << "\033[0m";
-            NPC enemy;
-            enemy.setNCP(hurtEnemies.front().first);
-            if (enemy.getHealth() < hurtEnemies.front().second || enemy.getGUID() == 0)
+            //find by guid
+            uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
+
+            //check if the object exist
+            if (objAddrs != 0)
             {
-                hurtEnemies.pop();
-                continue;
+                float health = hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
+                if (health < hurtEnemies.front().second)
+                {
+                    hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, hurtEnemies.front().second);
+                    hurtEnemies.pop();
+                    continue;
+                }
             }
-            
-            enemy.setHealth(hurtEnemies.front().second);
             hurtEnemies.pop();
 
         }
