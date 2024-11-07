@@ -77,6 +77,8 @@ public:
         enemies.clear();
         std::cout << "\033[34mFound Searching for Enemies" << std::endl;
         std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint64_t>(0x0000000200000002, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
+        
+
         for (uint32_t e : allEnemieAddrs)
         {
             if (0x04004232 != hobbitProcessAnalyzer->readData<uint32_t>(e + 0x10))

@@ -139,6 +139,9 @@ void NPC::setAnimation(uint32_t newAnimation)
 {
 	hobbitProcessAnalyzer->writeData(animationAddress, newAnimation);
 }
+uint32_t NPC::getAnimation() {
+	return hobbitProcessAnalyzer->readData<uint32_t>(animationAddress);
+}
 void NPC::setAnimFrames(float newAnimFrame, float newLastAnimFrame)
 {
 	hobbitProcessAnalyzer->writeData(animationAddress + 0x8, newAnimFrame);
