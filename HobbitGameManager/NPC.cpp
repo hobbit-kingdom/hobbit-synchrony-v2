@@ -36,11 +36,13 @@ uint32_t NPC::getObjectPtr() {
 // modifies game file
 void NPC::setGUID(uint32_t newGUID)
 {
-	hobbitProcessAnalyzer->writeData(objectAddress, newGUID);
+	uint32_t ObjectPtr = getObjectPtr();
+	hobbitProcessAnalyzer->writeData(ObjectPtr, newGUID);
 }
 uint64_t NPC::getGUID()
 {
-	return hobbitProcessAnalyzer->readData<uint64_t>(objectAddress + 0x8);
+	uint32_t ObjectPtr = getObjectPtr();
+	return hobbitProcessAnalyzer->readData<uint64_t>(ObjectPtr + 0x8);
 }
 
 // writes new positionX 
@@ -122,13 +124,13 @@ void NPC::setRotationY(float newRotation)
 
 
 void NPC::setHealth(float newHealth) {
-	//TO DO
-	// Set correct shfit from the heatlh
-	hobbitProcessAnalyzer->writeData(objectAddress + 0x290, newHealth);
+	uint32_t ObjectPtr = getObjectPtr();
+
+	hobbitProcessAnalyzer->writeData(ObjectPtr + 0x290, newHealth);
 }
 float NPC::getHealth() {
-	// Set correct shfit from the heatlh
-	 return hobbitProcessAnalyzer->readData<float>(objectAddress + 0x290);
+	uint32_t ObjectPtr = getObjectPtr();
+	 return hobbitProcessAnalyzer->readData<float>(ObjectPtr + 0x290);
 }
 
 

@@ -53,9 +53,13 @@ public:
         std::vector<BaseMessage> messages;
 
         processData();
+
         //SNAPSHOT DATA
         messages.push_back(writeSnap());
-        messages.push_back(writeEnemiesEvent());
+
+        BaseMessage enemy = writeEnemiesEvent();
+        if(enemy.message.size() >= 0)
+            messages.push_back(enemy);
 
         return messages;
     }
@@ -75,8 +79,8 @@ public:
         {
             NPC npc;
             uint64_t guid = hobbitProcessAnalyzer->readData<uint64_t>(e + 0x8);
-            npc.setNCP(guid);
-            enemies.push_back(std::make_pair(npc, npc.getHealth()));
+                npc.setNCP(guid);
+                enemies.push_back(std::make_pair(npc, npc.getHealth()));
         }
         std::cout << "End of searching for Enemies" << std::endl;
 
@@ -126,23 +130,24 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (auto &e : enemies)
+        for(int i = 0; i < enemies.size(); ++i)
         {
-            if (e.second > e.first.getHealth())
+
+            if (enemies[i].second > enemies[i].first.getHealth())
             {
-                std::cout << "Enemy: " << e.first.getGUID();
-                std::cout << "Before Health:" << e.second;
-                std::cout << "After Health:" << e.first.getHealth();
+                std::cout << "Enemy: " << enemies[i].first.getGUID();
+                std::cout << "Before Health:" << enemies[i].second;
+                std::cout << "After Health:" << enemies[i].first.getHealth();
                 std::cout << std::endl;
                 
-                e.second = e.first.getHealth();
+                enemies[i].second = enemies[i].first.getHealth();
                 //GUID
-                pushTypeToVector(e.first.getGUID(), dataVec);
-                dataVec[1] += sizeof(e.first.getGUID());
+                pushTypeToVector(enemies[i].first.getGUID(), dataVec);
+                dataVec[1] += sizeof(enemies[i].first.getGUID());
 
                 //Heath
-                pushTypeToVector(e.first.getHealth(), dataVec);
-                dataVec[1] += sizeof(e.first.getHealth());
+                pushTypeToVector(enemies[i].first.getHealth(), dataVec);
+                dataVec[1] += sizeof(enemies[i].first.getHealth());
 
                 ++enemisSend;
             }
@@ -154,9 +159,11 @@ private:
         for (const int& element : dataVec) {
             msg.message.push(element);
         }
-
-        std::cout << "Sending: Enemies " << enemisSend << std::endl;
-        return msg;
+        std::cout << "\033[31mSending: Enemies " << enemisSend <<"\033[0m" << std::endl;
+        if (enemisSend > 0)
+            return msg;
+        else
+            return BaseMessage();
     }
     void processData()
     {
