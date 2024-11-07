@@ -94,15 +94,15 @@ public:
             std::cout <<std::hex <<hurtEnemies.front().first << std::dec<< " " << hurtEnemies.front().second;
             std::cout << "\033[0m";
             //find by guid
-            uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
+            uint32_t objAddrs = NPC::hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
 
             //check if the object exist
             if (objAddrs != 0)
             {
-                float health = hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
-                if (health < hurtEnemies.front().second)
+                float health = NPC::hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
+                if (health > hurtEnemies.front().second)
                 {
-                    hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, hurtEnemies.front().second);
+                    NPC::hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, hurtEnemies.front().second);
                     hurtEnemies.pop();
                     continue;
                 }

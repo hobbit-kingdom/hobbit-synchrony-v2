@@ -125,6 +125,7 @@ private:
         BaseMessage msg(EVENT_MESSAGE, 0);
         std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::ENEMIES_HEALTH), 0 };
 
+        std::cout << "ca3dd490cdb41c01 " << hobbitProcessAnalyzer->findGameObjByGUID(0xca3dd490cdb41c01);
         // amount of enemies send
         uint32_t enemisSend = 0;
         pushTypeToVector(enemisSend, dataVec);
