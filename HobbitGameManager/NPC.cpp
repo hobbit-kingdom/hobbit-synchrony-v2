@@ -40,7 +40,7 @@ void NPC::setGUID(uint32_t newGUID)
 }
 uint64_t NPC::getGUID()
 {
-	return hobbitProcessAnalyzer->readData<uint32_t>(objectAddress + 0x8);
+	return hobbitProcessAnalyzer->readData<uint64_t>(objectAddress + 0x8);
 }
 
 // writes new positionX 
@@ -124,14 +124,11 @@ void NPC::setRotationY(float newRotation)
 void NPC::setHealth(float newHealth) {
 	//TO DO
 	// Set correct shfit from the heatlh
-	//hobbitProcessAnalyzer->writeData(objectAddress + 0xABCDABCD, newHealth);
+	hobbitProcessAnalyzer->writeData(objectAddress + 0x270 + 0x5 * 0x4, newHealth);
 }
 float NPC::getHealth() {
-	//TO DO
 	// Set correct shfit from the heatlh
-	// float health = hobbitProcessAnalyzer->readData<uint32_t>(objectAddress + 0xABCDABCD);
-	// return health;
-	return 0;
+	 return hobbitProcessAnalyzer->readData<uint32_t>(objectAddress + 0x270 + 0x5*0x4);
 }
 
 
@@ -180,6 +177,10 @@ void NPC::setPositionXPtr()
 	uint32_t animAdd2 = hobbitProcessAnalyzer->readData<uint32_t>(0x304 + animAdd1);
 	uint32_t animAdd3 = hobbitProcessAnalyzer->readData<uint32_t>(0x50 + animAdd2);
 	uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3);
+	if (animAdd4 == 0) 
+	{
+		std::cout << "Health: " << getHealth() << std::endl;
+	}
 	animationAddress = 0x8 + animAdd4;
 	positionXAddress.push_back(-0xC4 + animationAddress);
 

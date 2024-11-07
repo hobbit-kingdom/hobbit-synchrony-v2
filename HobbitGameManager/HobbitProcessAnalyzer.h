@@ -189,7 +189,7 @@ public:
 				T objPattern = readData<T>(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs));
 				if (objPattern == pattern)
 				{
-					gameObjs.push_back(objStackAddress);
+					gameObjs.push_back(objAddrs);
 				}
 			}
 		}
@@ -220,7 +220,7 @@ public:
 				std::vector<T> objPattern = readData(hobbitProcess, reinterpret_cast<LPVOID>(patternAddrs), pattern.size() * sizeof(T));
 				if (memcmp(objPattern.data(), pattern.data(), pattern.size()) == 0)
 				{
-					gameObjs.push_back(objStackAddress);
+					gameObjs.push_back(objAddrs);
 				}
 			}
 		}

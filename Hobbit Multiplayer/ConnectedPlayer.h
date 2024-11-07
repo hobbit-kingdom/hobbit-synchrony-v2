@@ -85,6 +85,7 @@ public:
         // Update Health of Enemies
         while (!hurtEnemies.empty())
         {
+            std::cout << "ENEMY HURT!!" << std::endl;
             NPC enemy; 
             enemy.setNCP(hurtEnemies.front().first);
             enemy.setHealth(hurtEnemies.front().second);

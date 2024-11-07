@@ -55,7 +55,7 @@ public:
         processData();
         //SNAPSHOT DATA
         messages.push_back(writeSnap());
-        
+        messages.push_back(writeEnemiesEvent());
 
         return messages;
     }
@@ -69,15 +69,17 @@ public:
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
 
         std::cout << "Searching for Enemies" << std::endl;
-        std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint32_t>( 0xABCABCABC, 0xC4); //put the values that indicate that thing
+        std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint8_t>(0x02, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
+        std::cout << "Found " << allEnemieAddrs.size() << " enemis" << std::endl;
+        for (uint32_t e : allEnemieAddrs)
+        {
+            NPC npc;
+            uint64_t guid = hobbitProcessAnalyzer->readData<uint64_t>(e + 0x8);
+            npc.setNCP(guid);
+            enemies.push_back(std::make_pair(npc, npc.getHealth()));
+        }
         std::cout << "End of searching for Enemies" << std::endl;
-        //for (uint32_t e : allEnemieAddrs)
-        //{
-        //    NPC npc;
-        //    uint32_t guid = hobbitProcessAnalyzer->readData<uint32_t>(e + 0x8);
-        //    npc.setNCP(guid);
-        //    enemies.push_back(std::make_pair(npc, npc.getHealth()));
-        //}
+
     }
 
 private:
@@ -126,9 +128,8 @@ private:
 
         for (std::pair<NPC, float> e : enemies)
         {
-            if (e.second >= e.first.getHealth())
+            if (e.second > e.first.getHealth())
             {
-
                 //GUID
                 pushTypeToVector(e.first.getGUID(), dataVec);
                 dataVec[1] += sizeof(e.first.getGUID());
