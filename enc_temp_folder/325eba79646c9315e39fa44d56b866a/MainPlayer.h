@@ -81,6 +81,7 @@ public:
         {
             if (0x04004232 != hobbitProcessAnalyzer->readData<uint32_t>(e + 0x10))
                 continue;
+            hobbitProcessAnalyzer->writeData<uint64_t>(e + 0x184 + 0x8 * 0x4, 0x00000000100000001);
             std::cout << std::hex << e << " || "  <<std::dec << hobbitProcessAnalyzer->readData<float>(e + 0x290) << std::endl;
             enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290)));
         }
