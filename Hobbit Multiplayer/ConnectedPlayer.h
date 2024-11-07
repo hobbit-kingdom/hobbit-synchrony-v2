@@ -69,8 +69,12 @@ public:
         npc.setPositionY(position.y);
         npc.setPositionZ(position.z);
         npc.setRotationY(rotation.y);
-        npc.setAnimation(animation);
-        npc.setAnimFrames(animFrame, lastAnimFrame);
+        if (animation != npc.getAnimation())
+        {
+            npc.setAnimation(animation);
+            npc.setAnimFrames(animFrame, lastAnimFrame);
+        }
+
 
         // Display the data
         std::cout << "\033[33m";

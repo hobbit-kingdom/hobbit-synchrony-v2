@@ -45,6 +45,7 @@ public:
 
 
 	void setAnimation(uint32_t newAnimation);
+	uint32_t getAnimation();
 	void setAnimFrames(float newAnimFrame, float newLastAnimFrame);
 
 	static HobbitProcessAnalyzer* hobbitProcessAnalyzer;
