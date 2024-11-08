@@ -21,6 +21,8 @@
 #include "../HobbitGameManager/HobbitGameManager.h"
 #include "../HobbitGameManager/NPC.h"
 
+#define ptrInventory 0x0075BDB0
+
 // Player classes
 class ConnectedPlayer {
     HobbitProcessAnalyzer *hobbitProcessAnalyzer;
@@ -32,6 +34,7 @@ class ConnectedPlayer {
     int8_t weapon;
 
     std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
+    std::queue<std::pair<uint8_t, float>> inventory;
 public:
     ConnectedPlayer() 
     {
@@ -66,6 +69,17 @@ public:
             hurtEnemies.push(std::pair(guid, health));
         }
     }
+    void readProcessInventory(std::queue<uint8_t>& gameData)
+    {
+        uint32_t numberChangeInventory = convertQueueToType<uint8_t>(gameData);
+
+        for (int i = 0; i < numberChangeInventory; i++)
+        {
+            uint8_t item = convertQueueToType<uint8_t>(gameData);
+            float value = convertQueueToType<float>(gameData);
+            inventory.push(std::pair(item, value));
+        }
+    }
     void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
     {
         level = convertQueueToType<uint32_t>(gameData);
@@ -76,6 +90,18 @@ public:
     {
         if (id == -1 || id == myId)
             return;
+
+        // Display the data
+        std::cout << "\033[33m";
+        std::cout << "Recieve the packet Send: " << std::endl;
+        std::cout << "weapon" << int(weapon) << " || ";
+        std::cout << "X: " << position.x << " || ";
+        std::cout << "Y: " << position.y << " || ";
+        std::cout << "Z: " << position.z << " || ";
+        std::cout << "R: " << rotation.y << " || ";
+        std::cout << "A: " << animation << std::endl << std::endl;
+        std::cout << "\033[0m";
+
         //set position, rotation, and animation
         npc.setPositionX(position.x);
         npc.setPositionY(position.y);
@@ -87,8 +113,8 @@ public:
             npc.setAnimFrames(animFrame, lastAnimFrame);
         }
 
-
-        if (weapon == -1)
+        
+        if (weapon == 2)
         {
             uint64_t guidNone = 0x0D8AD910E885100D;
             uint32_t addrsGuidNone = hobbitProcessAnalyzer->findGameObjByGUID(guidNone);
@@ -112,16 +138,8 @@ public:
             uint32_t addrsGuidStone = hobbitProcessAnalyzer->findGameObjByGUID(guidStone);
             npc.setWeapon(hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidStone + 0x260));
         }
+        
 
-        // Display the data
-        std::cout << "\033[33m";
-        std::cout << "Recieve the packet Send: " << std::endl;
-        std::cout << "X: " << position.x << " || ";
-        std::cout << "Y: " << position.y << " || ";
-        std::cout << "Z: " << position.z << " || ";
-        std::cout << "R: " << rotation.y << " || ";
-        std::cout << "A: " << animation << std::endl << std::endl;
-        std::cout << "\033[0m";
 
         // Update Health of Enemies
         while (!hurtEnemies.empty())
@@ -150,6 +168,23 @@ public:
             }
             hurtEnemies.pop();
 
+        }
+
+        while (!inventory.empty())
+        {
+            std::cout << "\033[31mITEM CHANGE!!  ";
+            std::cout << std::hex << inventory.front().first * 0x4 + ptrInventory << std::dec << " " << inventory.front().second;
+            std::cout << "\033[0m";
+                        
+            //check if the object exist
+            float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * inventory.front().first);
+            if (value != inventory.front().second)
+            {
+                hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * inventory.front().first, inventory.front().second);
+                inventory.pop();
+                continue;
+            }
+            inventory.pop();
         }
     }
 

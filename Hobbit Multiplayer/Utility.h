@@ -47,7 +47,8 @@ enum class DataLabel {
     SERVER = 0,
     CONNECTED_PLAYER_SNAP = 1,
     CONNECTED_PLAYER_LEVEL = 2,
-    ENEMIES_HEALTH = 3
+    ENEMIES_HEALTH = 3,
+    INVENTORY = 4
 };
 
 // Structs for message handling

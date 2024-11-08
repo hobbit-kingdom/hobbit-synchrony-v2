@@ -234,6 +234,18 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
                 connectedPlayers[0].readProcessEnemiesHealth(gameData);
             }
         }
+        else if (label == DataLabel::INVENTORY)
+        {
+            auto it = std::find_if(std::begin(connectedPlayers), std::end(connectedPlayers),
+                [&](const ConnectedPlayer& p) { return p.id == senderID; });
+            if (it != std::end(connectedPlayers)) {
+                it->readProcessInventory(gameData);
+            }
+            else {
+                std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
+                connectedPlayers[0].readProcessInventory(gameData);
+            }
+        }
         else
         {
             std::cerr << "ERROR: Unknown label received" << std::endl;
