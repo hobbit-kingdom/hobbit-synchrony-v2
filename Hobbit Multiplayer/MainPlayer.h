@@ -69,8 +69,12 @@ public:
         messages.push_back(writeSnap());
 
         BaseMessage enemy = writeEnemiesEvent();
-        if(enemy.message.size() >= 0)
+        if(enemy.message.size() > 0)
             messages.push_back(enemy);
+
+        BaseMessage inventory = writeInventoryEvent();
+        if (inventory.message.size() > 0)
+            messages.push_back(inventory);
 
         return messages;
     }
