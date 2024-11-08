@@ -133,7 +133,7 @@ private:
         }
         //0x260
         std::cout << std::dec;
-        std::cout <<"Sending: Weapon"<< int(bilboWeapon) << ", X " << position.x << ", Y " << position.y << ", Z " << position.z << ", R " << rotation.y << ", A " << animation << std::endl;
+        std::cout << "Sending: Weapon " << int(bilboWeapon) << ", X " << position.x << ", Y " << position.y << ", Z " << position.z << ", R " << rotation.y << ", A " << animation << std::endl;
         return snap;
     }
     BaseMessage writeEnemiesEvent()
