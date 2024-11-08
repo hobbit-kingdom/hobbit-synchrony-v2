@@ -95,7 +95,7 @@ public:
             std::cout << std::hex << e << " || "  <<std::dec << hobbitProcessAnalyzer->readData<float>(e + 0x290) << std::endl;
             enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290)));
         }
-        for (uint8_t item = 0 ; item < 58; item++)
+        for (uint8_t item = 0 ; item < 56; item++)
         {
             inventory.push_back(std::make_pair(item, hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * item)));
         }
@@ -199,11 +199,22 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (uint8_t i = 0; i < 58; i++)
+        for (uint8_t i = 0; i < 56; i++)
         {
-
+            if (i > 1 and i < 6) i = 6;
+            else if (i > 7 and i < 20) i = 20;
+            else if (i > 22 and i < 25) i = 25;
+            else if (i > 25 and i < 28) i = 28;
+            else if (i == 46) i++;
+            else if (i == 50) i = 52;
             if (inventory[i].second != hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i))
             {
+                if (i == 6 and inventory[i].second > hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i))
+                    continue;
+                if (i == 7 and inventory[25].second > hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * 25))
+                    continue;
+                else if (i == 7 and inventory[i].second > hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i))
+                    continue;
                 std::cout << "Inventory: " << std::hex << ptrInventory + 0x4 * i << std::dec;
                 std::cout << "Before: " << inventory[i].second;
                 std::cout << "After: " << hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
