@@ -199,7 +199,7 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (int i = 0; i < 58; i++)
+        for (uint8_t i = 0; i < 58; i++)
         {
 
             if (inventory[i].second != hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i))
@@ -211,7 +211,7 @@ private:
 
                 inventory[i].second = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
                 //Множитель указателя инвенторя
-                pushTypeToVector(hobbitProcessAnalyzer->readData<uint8_t>(i), dataVec);
+                pushTypeToVector(i, dataVec);
                 dataVec[1] += sizeof(uint8_t);
 
                 //Значение

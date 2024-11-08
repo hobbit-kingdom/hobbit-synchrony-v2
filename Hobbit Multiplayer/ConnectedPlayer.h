@@ -72,7 +72,7 @@ public:
     }
     void readProcessInventory(std::queue<uint8_t>& gameData)
     {
-        uint32_t numberChangeInventory = convertQueueToType<uint8_t>(gameData);
+        uint32_t numberChangeInventory = convertQueueToType<uint32_t>(gameData);
 
         for (int i = 0; i < numberChangeInventory; i++)
         {
@@ -172,7 +172,7 @@ public:
             std::cout << "\033[31mITEM CHANGE!!  ";
             std::cout << std::hex << inventory.front().first * 0x4 + ptrInventory << std::dec << " " << inventory.front().second;
             std::cout << "\033[0m";
-                        
+          
             //check if the object exist
             float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * inventory.front().first);
             if (value != inventory.front().second)

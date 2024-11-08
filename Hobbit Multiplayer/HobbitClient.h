@@ -249,6 +249,7 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
         else
         {
             std::cerr << "ERROR: Unknown label received" << std::endl;
+            std::cout << int(label) << std::endl;
         }
     }
 }
