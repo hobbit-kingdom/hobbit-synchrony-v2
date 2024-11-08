@@ -244,6 +244,8 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
 
 void HobbitClient::onEnterNewLevel() {
 
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
     hobbitGameManager.getHobbitProcessAnalyzer()->updateObjectStackAddress();
     
     
