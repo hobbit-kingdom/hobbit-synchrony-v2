@@ -141,6 +141,11 @@
     <ClCompile Include="NPC.cpp" />
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\LogSystem\LogSystem.vcxproj">
+      <Project>{4c528233-aca8-414f-8896-23c5ca950da0}</Project>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

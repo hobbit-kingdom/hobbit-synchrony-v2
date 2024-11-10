@@ -1,5 +1,4 @@
 #pragma once
-#include "HobbitProcessAnalyzer.h"
 
 #include <vector>
 #include <mutex>
@@ -9,14 +8,19 @@
 
 #include <future>
 #include <chrono>
+#include "HobbitProcessAnalyzer.h"
+#include "../LogSystem/LogManager.h"
 class HobbitGameManager
 {
+
 public:
     using Listener = std::function<void()>;
+    LogOption::Ptr logOption_;
 
-    HobbitGameManager()
+    HobbitGameManager() : logOption_(LogManager::Instance().CreateLogOption("HOBBIT GAME MANAGER"))
     {
-      
+        LogManager::Instance().MoveLogOption("HOBBIT PROC ANALYZ", "HOBBIT GAME MANAGER");
+        LogManager::Instance().DisplayHierarchy();
     }
     ~HobbitGameManager()
     {
@@ -28,7 +32,7 @@ public:
         // Wait Until the game is open
         while (!isGameRunning())
         {
-            std::cout << "You must open the game!" << std::endl;
+            logOption_->LogMessage(LogLevel::Log_Prompt, "You must open the game!");
             std::this_thread::sleep_for(std::chrono::seconds(2)); // Sleep for 2 seconds
         }
         

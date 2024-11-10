@@ -14,20 +14,23 @@
 #include <functional>
 #include <deque>
 #include <cassert>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <memory>
+#include <mutex>
+#include <algorithm>
 
 #include "platform-specific.h"
 #include "Message.h"
 
+#include "../LogSystem/LogManager.h"
 #define PORT 54000
 
 class Client {
 public:
-    Client() : isConnected(false) {}
-    Client(std::string serverIP) : isConnected(false) {
-        if (!connectToServer(serverIP)) {
-            std::cerr << "Failed to connect to server.\n";
-        }
-    }
+    Client();
+    Client(std::string serverIP);
     ~Client() { stop(); }
 
     int start();
@@ -66,6 +69,8 @@ public:
     std::queue<uint8_t> getConnectedClients() { return connectedClients; }
     void notifyServerDown();
 private:
+    LogOption::Ptr logOption_;
+
     SOCKET serverSocket = 0;
 
     std::thread receiveThread;

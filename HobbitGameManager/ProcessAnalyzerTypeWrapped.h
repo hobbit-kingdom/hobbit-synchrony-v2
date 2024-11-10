@@ -11,10 +11,14 @@
 
 #include <cstdint> 
 #include "ProcessAnalyzer.h"
+
 class ProcessAnalyzerTypeWrapped : protected ProcessAnalyzer {
-
+	LogOption::Ptr logOption_;
 public:
-
+	ProcessAnalyzerTypeWrapped() : logOption_(LogManager::Instance().CreateLogOption("PROC ANALYZ WRAP"))
+	{
+		LogManager::Instance().MoveLogOption("PROC ANALYZ", "PROC ANALYZ WRAP");
+	}
 	using ProcessAnalyzer::readData;
 	using ProcessAnalyzer::writeData;
 	using ProcessAnalyzer::getProcess;

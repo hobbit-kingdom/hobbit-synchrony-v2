@@ -1,16 +1,23 @@
 #include "Client.h"
 
 
+Client::Client() : isConnected(false), logOption_(LogManager::Instance().CreateLogOption("CLIENT")) {
+}
+Client::Client(std::string serverIP) : isConnected(false), logOption_(LogManager::Instance().CreateLogOption("CLIENT")) {
+    if (!connectToServer(serverIP)) {
+        std::cerr << "Failed to connect to server.\n";
+    }
+}
 
 int Client::start()
 {
     std::string serverIP;
-
-    std::cout << "Enter server IP address: ";
+    
+    logOption_->LogMessage(LogLevel::Log_Prompt, "Enter server IP address: ");
     std::cin >> serverIP;
 
     if (!connectToServer(serverIP)) {
-        std::cerr << "Failed to connect to server.\n";
+        logOption_->LogMessage(LogLevel::Log_Warning, "Failed to connect to server.");
         return 1;
     }
 
@@ -22,7 +29,7 @@ int Client::start()
 int Client::start(std::string serverIP)
 {
     if (!connectToServer(serverIP)) {
-        std::cerr << "Failed to connect to server: " << serverIP << "\n";
+        logOption_->LogMessage(LogLevel::Log_Error, "Failed to connect to server", serverIP);
         return 1;
     }
     return 0;
@@ -43,7 +50,7 @@ bool Client::connectToServer(const std::string& serverIP) {
     // Create a socket for the connection
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == INVALID_SOCKET) {
-        std::cerr << "Error creating socket.\n";
+        logOption_->LogMessage(LogLevel::Log_Error, "", "Issues creating socket");
         return false; // Socket creation failed
     }
 
@@ -55,7 +62,7 @@ bool Client::connectToServer(const std::string& serverIP) {
 
     // Attempt to connect to the server
     if (connect(serverSocket, (sockaddr*)&serverHint, sizeof(serverHint)) == SOCKET_ERROR) {
-        std::cerr << "Cannot connect to server.\n";
+        logOption_->LogMessage(LogLevel::Log_Error, "", "Cannot connect to server");
         return false; // Connection failed
     }
 
@@ -64,8 +71,7 @@ bool Client::connectToServer(const std::string& serverIP) {
     // Start a thread to receive messages
     receiveThread = std::thread(&Client::receiveMessages, this);
     receiveThread.detach(); // Detach the thread
-
-    std::cout << "Connected to server.\n";
+    logOption_->LogMessage(LogLevel::Log_Info, "", "Connected to server");
 
     return true; // Connection successful
 }
@@ -90,7 +96,7 @@ void Client::receiveMessages() {
         // Receive message size
         int bytesReceived = recv(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
         if (bytesReceived <= 0) {
-            std::cerr << "Server is down or connection lost.\n"; // Notify the client
+            logOption_->LogMessage(LogLevel::Log_Error, "", "Server is down or connection lost.");
             notifyServerDown(); // Custom function to handle disconnection
             break; // Exit loop if no bytes received
         }
@@ -167,7 +173,7 @@ void Client::sortMessageByType(BaseMessage* msg) {
     case CLIENT_ID_MESSAGE: {
         BaseMessage* idMsg = static_cast<BaseMessage*>(msg);
         clientID = idMsg->senderID; // Store assigned client ID
-        std::cout << "Assigned client ID: " << (int)clientID << std::endl; // Output assigned ID
+        logOption_->LogMessage(LogLevel::Log_Debug, "", "Assigned client ID: ", int(clientID));
         break;
     }
     }
@@ -183,7 +189,7 @@ void Client::updateClientList(const std::queue<uint8_t>& clientIDs) {
     std::queue<uint8_t> tempQueue = clientIDs; // Create a copy of the input queue
     while (!tempQueue.empty()) {
         connectedClients.push(tempQueue.front()); // Add each client ID to the connected clients queue
-        std::cout << std::to_string(tempQueue.front()) << std::endl; // Output each client ID
+        logOption_->LogMessage(LogLevel::Log_Debug, "", std::to_string(tempQueue.front()));
         tempQueue.pop(); // Remove the processed client ID
     }
 
@@ -206,6 +212,6 @@ void Client::addListener(std::function<void(const std::queue<uint8_t>&)> listene
 
 void Client::notifyServerDown() {
     isConnected = false; // Set connection flag to false
-    std::cout << "Disconnected from server. Please check the server status.\n";
+    logOption_->LogMessage(LogLevel::Log_Info, "","Disconnected from server. Please check the server status.");
     updateClientList(std::queue<uint8_t>());
 }

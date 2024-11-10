@@ -7,23 +7,29 @@
 #include "HobbitClient.h"
 #include "../ServerClient/Server.h"
 #include "../ServerClient/IPv4.h"
+#include "../LogSystem/LogManager.h"
 
 //THIS #include <windows.h> MUST BE AFTER THE ../ServerClient AND ../HobbitGameManager
 #include <windows.h>
 
 using namespace std;
 
+LogOption::Ptr logOption_;
 int mainMenu()
 {
+	logOption_ = LogManager::Instance().CreateLogOption("SYNCHRONY");
 
 	char input;
 	do
 	{
-		cout << "1 Server" << endl;
-		cout << "2 Client" << endl;
-		cout << "3 Server & Client" << endl;
-		cout << "Q Close Program" << endl << endl;
-		cout << "Enter Your Choise: ";
+		std::string menuPrompt = "";
+		menuPrompt += "1 Server\n";
+		menuPrompt += "2 Client\n";
+		menuPrompt += "3 Server & Client\n";
+		menuPrompt += "Q Close Program\n";
+		menuPrompt += "Enter Your Choise: ";
+
+		logOption_->LogMessage(LogLevel::Log_Prompt, menuPrompt);
 
 		cin >> input;
 		input = toupper(input);
@@ -33,7 +39,7 @@ int mainMenu()
 		else if (input == 'Q')
 			break;
 		else 
-			cout << "You must enter one of the choices bellow:" << endl;
+			logOption_->LogMessage(LogLevel::Log_Prompt, "You must enter one of the choices bellow:");
 
 	} while (true);
 	return 0;
@@ -42,15 +48,14 @@ void server()
 {
 	Server server;
 	server.start();
-	cout << "Server Started" << endl;
-	cout << "Press Ctrl+X to stop the server..." << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Server Started");
 	
 	while (server.getIsRunning()) {
 		this_thread::sleep_for(std::chrono::milliseconds(1000));
 	}
 
 	server.stop();
-	cout << "Server Stoped" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Server Started");
 
 }
 void client()
@@ -58,34 +63,34 @@ void client()
 	HobbitClient hobbitClient;
 	if (hobbitClient.start())
 		return;
-	cout << "Client Started" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Client Started");
 
 	while (hobbitClient.isRunning()) {
 		this_thread::sleep_for(std::chrono::milliseconds(2000));
 	}
 
 	hobbitClient.stop();
-	cout << "Hobbit Client Stoped" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Client Stoped");
 }
 void serverClient()
 {
 	Server server;
 	server.start();
-	cout << "Server Started" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Server Started");
 
 	HobbitClient hobbitClient;
 	string myIp = getLocalIPv4Address();
 	if (hobbitClient.start(myIp))
 		return;
-	cout << "Client Started" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Client Started");
 
 	while (hobbitClient.isRunning()) {
 		this_thread::sleep_for(std::chrono::milliseconds(2000));
 	}
 	hobbitClient.stop();
-	cout << "Hobbit Client Stoped" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Client Stoped");
 	server.stop();
-	cout << "Server Stoped" << endl;
+	logOption_->LogMessage(LogLevel::Log_Info, "Server Stoped");
 }
 
 int main()
@@ -95,7 +100,7 @@ int main()
 		switch (mainMenu())
 		{
 		case '0':
-			cout << "End program" << endl;
+			logOption_->LogMessage(LogLevel::Log_Info, "End program");
 			break;
 		case '1':
 			server();
@@ -107,7 +112,7 @@ int main()
 			serverClient();
 			break;
 		default:
-			cout << "ERROR: This Menu Option was not available" << endl;
+			logOption_->LogMessage(LogLevel::Log_Error, "This Menu Option was not available");
 			break;
 		}
 	} while (true);

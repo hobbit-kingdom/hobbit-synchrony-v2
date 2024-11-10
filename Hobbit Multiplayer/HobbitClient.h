@@ -20,6 +20,7 @@
 #include "../ServerClient/Client.h"
 #include "../HobbitGameManager/HobbitGameManager.h"
 #include "../HobbitGameManager/NPC.h"
+#include "../LogSystem/LogManager.h"
 
 #include "Utility.h"
 #include "MainPlayer.h"
@@ -29,14 +30,13 @@
 class HobbitClient {
 public:
     HobbitClient(std::string initialServerIp = "")
-        : serverIp(std::move(initialServerIp)), running(false), processMessages(false) {
+        : serverIp(std::move(initialServerIp)), running(false), processMessages(false), logOption_(LogManager::Instance().CreateLogOption("HOBBIT CLIENT")) {
         for (auto& e :  connectedPlayers)
         {
             e.setHobbitProcessAnalyzer(hobbitGameManager);
         }
         mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager);
     }
-
     ~HobbitClient() { stop(); }
 
     int start();
@@ -46,6 +46,7 @@ public:
     bool isRunning() { return running; }
 
 private:
+    LogOption::Ptr logOption_;
     Client client;
     HobbitGameManager hobbitGameManager;
 
@@ -80,7 +81,8 @@ private:
 };
 
 int HobbitClient::start() {
-    std::cout << "Enter server IP address: ";
+    logOption_->LogMessage(LogLevel::Log_Prompt, "Enter server IP address: ");
+
     std::cin >> serverIp;
     std::cin.ignore();
 
@@ -99,7 +101,7 @@ int HobbitClient::start(const std::string& ip) {
 
     while (!hobbitGameManager.isGameRunning()) {
         std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << "You must open The Hobbit 2003 game!" << std::endl;
+        logOption_->LogMessage(LogLevel::Log_Prompt, "You must open The Hobbit 2003 game!");
     }
 
     running = true;
@@ -155,7 +157,6 @@ void HobbitClient::readMessage() {
 
     BaseMessage textMessageOpt = client.frontTextMessage();
     if (textMessageOpt.message.size() > 0) {
-        std::cout << "Received Text Message from " << int(textMessageOpt.senderID) << ": ";
         // Assuming textMessageOpt.message is a queue of characters or strings
         std::string fullMessage;
         while (!textMessageOpt.message.empty()) {
@@ -163,7 +164,7 @@ void HobbitClient::readMessage() {
             textMessageOpt.message.pop(); // Remove the front message from the queue
         }
 
-        std::cout << fullMessage << std::endl;
+        logOption_->LogMessage(LogLevel::Log_Debug, "Received Text Message from", int(textMessageOpt.senderID), ":", fullMessage);
 
         client.popFrontTextMessage();
     }
@@ -200,7 +201,7 @@ void HobbitClient::writeMessage() {
     }
 }
 void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) {
-    std::cout << "Received Message from client " << senderID << std::endl;
+    logOption_->LogMessage(LogLevel::Log_Debug, "Received Game Massage from", senderID);
 
     while (!gameData.empty()) {
         DataLabel label = static_cast<DataLabel>(gameData.front());
@@ -217,7 +218,7 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
                 it->readConectedPlayerSnap(gameData);
             }
             else {
-                std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
+                logOption_->LogMessage(LogLevel::Log_Error, "Unregistered player id", senderID);
                 connectedPlayers[0].readConectedPlayerSnap(gameData);
             }
 
@@ -230,7 +231,7 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
                 it->readProcessEnemiesHealth(gameData);
             }
             else {
-                std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
+                logOption_->LogMessage(LogLevel::Log_Error, "Unregistered player id", senderID);
                 connectedPlayers[0].readProcessEnemiesHealth(gameData);
             }
         }
@@ -242,14 +243,13 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
                 it->readProcessInventory(gameData);
             }
             else {
-                std::cerr << "ERROR: Unregistered player id: " << senderID << std::endl;
+                logOption_->LogMessage(LogLevel::Log_Error, "Unregistered player id", senderID);
                 connectedPlayers[0].readProcessInventory(gameData);
             }
         }
         else
         {
-            std::cerr << "ERROR: Unknown label received" << std::endl;
-            std::cout << int(label) << std::endl;
+            logOption_->LogMessage(LogLevel::Log_Error, "Unknown label received", int(label));
         }
     }
 }
@@ -296,12 +296,13 @@ void HobbitClient::onClientListUpdate(const std::queue<uint8_t>&) {
 std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
     std::ifstream file;
     std::string filePath = "FAKE_BILBO_GUID.txt";
-
+    bool foudFileInitially = true;;
     // Open the file, prompting the user if it doesn't exist
     while (!file.is_open()) {
         file.open(filePath);
         if (!file.is_open()) {
-            std::cout << "File not found. Enter the path to FAKE_BILBO_GUID.txt or 'q' to quit: ";
+            foudFileInitially = false;
+            logOption_->LogMessage(LogLevel::Log_Prompt, "File not found. Enter the path to FAKE_BILBO_GUID.txt or 'q' to quit: ");
             std::string input;
             std::getline(std::cin, input);
             if (input == "q") return {}; // Quit if user enters 'q'
@@ -329,7 +330,7 @@ std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
             tempGUID.push_back(guid);
         }
     }
-
-    std::cout << "FOUND FILE!" << std::endl;
+    if(foudFileInitially)
+        logOption_->LogMessage(LogLevel::Log_Info, "FOUND FILE!");
     return tempGUID;
 }

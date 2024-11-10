@@ -4,16 +4,22 @@
 #include <Windows.h>
 #include <memoryapi.h>
 #include <TlHelp32.h>
+#include "../LogSystem/LogManager.h"
 #endif
 
 #include <iostream>
 #include <vector>
 #include <cstdint>
-// Other code...
 
 class ProcessAnalyzer
 {
+	LogOption::Ptr logOption_;
+
 public:
+	ProcessAnalyzer() : logOption_(LogManager::Instance().CreateLogOption("PROC ANALYZ"))
+	{
+
+	}
 	HANDLE getProcess(const char* processName)
 	{
 		HANDLE process;
@@ -22,7 +28,7 @@ public:
 		HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
 		if (snapshot == INVALID_HANDLE_VALUE)
 		{
-			std::cout << "ERROR: " << GetLastError() << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, GetLastError());
 			return nullptr;
 		}
 
@@ -48,7 +54,7 @@ public:
 			CloseHandle(snapshot);
 
 		if (pid == 0) {
-			std::cout << "WARNING: " << processName << " - Process Not Found" << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Warning, processName, " - Process Not Found");
 			return nullptr;
 		}
 
@@ -61,7 +67,7 @@ public:
 	{
 		if (process == NULL)
 		{
-			std::cout << "ERROR: " << process << "Process Not Specified" << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, process, "Process Not Specified");
 			return;
 		}
 
@@ -71,14 +77,14 @@ public:
 		//change protection for the slelcted memory to read and write
 		if (!VirtualProtectEx(process, address, dwSize, PAGE_EXECUTE_READWRITE, &oldProtect))
 		{
-			std::cout << "ERROR: " << GetLastError() << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, GetLastError());
 			return;
 		}
 
 		//write the data
 		if (!WriteProcessMemory(process, address, data.data(), dwSize, NULL))
 		{
-			std::cout << "ERROR: " << GetLastError() << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, GetLastError());
 		}
 
 		//change protection to the previous state
@@ -90,7 +96,7 @@ public:
 		std::vector<uint8_t> data(bytesSize);
 		if (process == NULL)
 		{
-			std::cout << "ERROR: Process Not Specified" << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, "Process Not Specified");
 			return data;
 		}
 
@@ -98,14 +104,14 @@ public:
 		DWORD oldProtect;
 		if (!VirtualProtectEx(process, address, bytesSize, PAGE_READWRITE, &oldProtect))
 		{
-			std::cout << "ERROR: Could not change memory protection. Error: " << GetLastError() << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, "Could not change memory protection: ", GetLastError());
 			return data;
 		}
 
 		// Read the memory
 		if (!ReadProcessMemory(process, address, data.data(), bytesSize, NULL))
 		{
-			std::cout << "ERROR: Could not read memory. Error: " << GetLastError() << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, "Could not read memory: ", GetLastError());
 			return data;
 		}
 

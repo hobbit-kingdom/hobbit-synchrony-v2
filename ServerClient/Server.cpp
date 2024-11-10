@@ -10,7 +10,7 @@ void Server::start() {
     // Create listening socket
     listeningSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (listeningSocket == INVALID_SOCKET) {
-        std::cerr << "Error creating socket.\n";
+        logOption_->LogMessage(LogLevel::Log_Error, "Error creating socket");
         return;
     }
 
@@ -21,14 +21,13 @@ void Server::start() {
     serverHint.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(listeningSocket, (sockaddr*)&serverHint, sizeof(serverHint)) == SOCKET_ERROR) {
-        std::cerr << "Error binding socket.\n";
+        logOption_->LogMessage(LogLevel::Log_Error, "Error binding socket");
         return;
     }
 
     // Start listening
     listen(listeningSocket, SOMAXCONN);
-
-    std::cout << "Server is listening on port " << PORT << "...\n";
+    logOption_->LogMessage(LogLevel::Log_Info, "Server is listening on port ", PORT);
 
     // Accept clients in a separate thread
     std::thread(&Server::acceptClients, this).detach();
@@ -67,7 +66,7 @@ void Server::acceptClients() {
             clientHandler->thread = std::thread(&Server::handleClient, this, clientHandler);
             clientHandler->thread.detach();
 
-            std::cout << "Client " << (int)clientID << " connected.\n";
+            logOption_->LogMessage(LogLevel::Log_Info, "Client", (int)clientID , "connected.");
         }
     }
 }
@@ -119,7 +118,7 @@ void Server::handleClient(ClientHandler* clientHandler) {
 
 
     closesocket(clientSocket);
-    std::cout << "Client " << (int)clientID << " disconnected.\n";
+    logOption_->LogMessage(LogLevel::Log_Info, "Client", (int)clientID, "disconnected.");
 }
 
 void Server::broadcastMessage(const BaseMessage& msg, uint8_t excludeID) {
@@ -160,8 +159,7 @@ void Server::notifyClients() {
         send(clientHandler->socket, (char*)&msgSize, sizeof(msgSize), 0);
         send(clientHandler->socket, (char*)buffer.data(), buffer.size(), 0);
     }
-
-    std::cout << "*Notified all clients about current client list" << std::endl;
+    logOption_->LogMessage(LogLevel::Log_Debug, "Notified all clients about current client list");
 }
 void Server::stop() {
     isRunning = false;

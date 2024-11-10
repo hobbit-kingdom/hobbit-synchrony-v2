@@ -14,9 +14,9 @@
 class HobbitProcessAnalyzer : public ProcessAnalyzerTypeWrapped
 {
 public:
-	HobbitProcessAnalyzer()
+	HobbitProcessAnalyzer() : logOption_(LogManager::Instance().CreateLogOption("HOBBIT PROC ANALYZ"))
 	{
-		
+		LogManager::Instance().MoveLogOption("PROC ANALYZ WRAP", "HOBBIT PROC ANALYZ");
 	}
 	void updatePtrToProcess()
 	{
@@ -112,8 +112,8 @@ public:
 				}
 			}
 		}
-
-		std::cout << "WARNING: Couldn't find " << guid << " GUID in the Game Object Stack" << std::endl;
+		//hex
+		logOption_->LogMessage(LogLevel::Log_Warning, "Couldn't find", guid, " GUID in the Game Object Stack");
 		return 0;
 	}
 
@@ -137,8 +137,8 @@ public:
 				}
 			}
 		}
-
-		std::cout << "WARNING: Couldn't find " << pattern << " Pattern in the Game Object Stack" << std::endl;
+		//hex
+		logOption_->LogMessage(LogLevel::Log_Warning, "Couldn't find", pattern, " Pattern in the Game Object Stack");
 		return 0;
 	}
 	template <typename T>
@@ -163,9 +163,9 @@ public:
 			}
 		}
 
-		std::cout << "WARNING: Couldn't find ";
-		for (T e : pattern) std::cout << e << "_";
-		std::cout << " Pattern in the Game Object Stack" << std::endl;
+		std::string warning = "";
+		for (T e : pattern) warning += e + "_";
+		logOption_->LogMessage(LogLevel::Log_Warning, "Couldn't find", warning, " Pattern in the Game Object Stack");
 
 		return 0;
 	}
@@ -196,7 +196,7 @@ public:
 
 		if (gameObjs.size() == 0)
 		{
-			std::cout << "WARNING: Couldn't find "<< pattern << " Pattern in the Game Object Stack" << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Warning, "Couldn't find", pattern, " Pattern in the Game Object Stack");
 		}
 
 		return gameObjs;
@@ -285,7 +285,7 @@ public:
 
 
 private:
-
+	LogOption::Ptr logOption_;
 	HANDLE hobbitProcess = 0;
 
 	uint32_t objectStackSize = 0x0;
