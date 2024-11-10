@@ -13,7 +13,6 @@
 #include <unistd.h>
 #endif
 
-#include "Utilities.h"
 class LogManager;
 
 enum class LogLevel {
@@ -63,8 +62,6 @@ public:
     template <typename... Args>
     void LogMessage(LogLevel msgLevel, const Args&... args) {
         std::ostringstream combinedStream;
-
-        // Fold expression to combine all arguments into a single string
         
         ((combinedStream << toString(args) << " "), ...); // Add a space after each argument
 
