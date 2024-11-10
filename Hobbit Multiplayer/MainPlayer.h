@@ -22,6 +22,8 @@
 #include "../ServerClient/Client.h"
 #include "../HobbitGameManager/HobbitGameManager.h"
 #include "../HobbitGameManager/NPC.h"
+#include "../LogSystem/LogManager.h"
+
 #define ptrInventory 0x0075BDB0
 
 class MainPlayer {
@@ -47,8 +49,9 @@ class MainPlayer {
 
     std::atomic<bool> processPackets;
 
+    LogOption::Ptr logOption_;
 public:
-    MainPlayer()
+    MainPlayer() : logOption_(LogManager::Instance().CreateLogOption("MAIN PLAYER"))
     {
     }
     void setHobbitProcessAnalyzer(HobbitGameManager& initialHobbitGameManager)
@@ -80,29 +83,36 @@ public:
     }
 
     void readPtrs() {
-        
+        //Biblbo Pointers
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
+        
+        //Enemies 
         enemies.clear();
-        std::cout << "\033[34mFound Searching for Enemies" << std::endl;
+        logOption_->LogMessage(LogLevel::Log_Debug, "List Enemies");
+        logOption_->increaseDepth();
         std::vector<uint32_t> allEnemieAddrs = hobbitProcessAnalyzer->findAllGameObjByPattern<uint64_t>(0x0000000200000002, 0x184 + 0x8 * 0x4); //put the values that indicate that thing
         
-
         for (uint32_t e : allEnemieAddrs)
         {
             if (0x04004232 != hobbitProcessAnalyzer->readData<uint32_t>(e + 0x10))
                 continue;
-            std::cout << std::hex << e << " || "  <<std::dec << hobbitProcessAnalyzer->readData<float>(e + 0x290) << std::endl;
+            //hex
+            logOption_->LogMessage(LogLevel::Log_Debug, "Address:", e, "Health: ", hobbitProcessAnalyzer->readData<float>(e + 0x290));
             enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290)));
         }
+        logOption_->decreaseDepth();
+        logOption_->LogMessage(LogLevel::Log_Debug, "Enemis Foud:", enemies.size());
+
+        //Items
+        logOption_->LogMessage(LogLevel::Log_Debug, "List Items");
+        logOption_->increaseDepth();
         for (uint8_t item = 0 ; item < 56; item++)
         {
+            logOption_->LogMessage(LogLevel::Log_Debug, "Address:", ptrInventory + 0x4 * item, "Value: ", hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * item));
             inventory.push_back(std::make_pair(item, hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * item)));
         }
-
-        std::cout << enemies.size() << " enemies" << std::endl;
-        std::cout << "End of searching for Enemies" << std::endl << "\033[0m";
-
+        logOption_->decreaseDepth();
     }
 
 private:
@@ -135,9 +145,8 @@ private:
         for (const uint8_t& element : dataVec) {
             snap.message.push(element);
         }
-        //0x260
-        std::cout << std::dec;
-        std::cout << "Sending: Weapon " << int(bilboWeapon) << ", X " << position.x << ", Y " << position.y << ", Z " << position.z << ", R " << rotation.y << ", A " << animation << std::endl;
+
+        logOption_->LogMessage(LogLevel::Log_Debug, "Sending Msg", "size", int(dataVec[1]), "Anim", animation, "Anim Frames", bilboAnimFrame, bilboLastAnimFrame, "Pos", position.x, position.y, position.z, "RotY", rotation.y, "Weapon", bilboWeapon);
         return snap;
     }
     BaseMessage writeEnemiesEvent()
@@ -156,10 +165,10 @@ private:
 
             if (enemies[i].second > hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290))
             {
-                std::cout << "Enemy: " << std::hex << enemies[i].first << std::dec;
-                std::cout << "Before Health:" << enemies[i].second;
-                std::cout << "After Health:" << hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
-                std::cout << std::endl;
+                logOption_->LogMessage(LogLevel::Log_Debug, "Write Enemy Address", enemies[i].first);
+                logOption_->increaseDepth();
+                logOption_->LogMessage(LogLevel::Log_Debug, "Heath: Before", enemies[i].second, "After", hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290));
+                logOption_->decreaseDepth();
                 
                 enemies[i].second = hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
                 //GUID
@@ -182,7 +191,7 @@ private:
         }
         if (enemisSend > 0)
         {
-            std::cout << "\033[31mSending: Enemies " << enemisSend << "\033[0m" << std::endl;
+            logOption_->LogMessage(LogLevel::Log_Debug, "Sending: Enemies sent", enemisSend);
             return msg;
         }
         else
@@ -215,11 +224,11 @@ private:
                     continue;
                 else if (i == 7 and inventory[i].second > hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i))
                     continue;
-                std::cout << "Inventory: " << std::hex << ptrInventory + 0x4 * i << std::dec;
-                std::cout << "Before: " << inventory[i].second;
-                std::cout << "After: " << hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
-                std::cout << std::endl;
-
+                //hex
+                logOption_->LogMessage(LogLevel::Log_Debug, "Write Inventory Address", ptrInventory + 0x4 * i);
+                logOption_->increaseDepth();
+                logOption_->LogMessage(LogLevel::Log_Debug, "Value: Before", inventory[i].second, "After", hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i));
+                logOption_->decreaseDepth();
                 inventory[i].second = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
                 //Множитель указателя инвенторя
                 pushTypeToVector(i, dataVec);
@@ -241,7 +250,7 @@ private:
         }
         if (inventorySend > 0)
         {
-            std::cout << "\033[31mSending: Item " << inventorySend << "\033[0m" << std::endl;
+            logOption_->LogMessage(LogLevel::Log_Debug, "Sending: Items sent", int(inventorySend));
             return msg;
         }
         else

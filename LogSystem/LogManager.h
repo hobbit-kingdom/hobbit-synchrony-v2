@@ -13,6 +13,7 @@
 #include <unistd.h>
 #endif
 
+#include "Utilities.h"
 class LogManager;
 
 enum class LogLevel {
@@ -64,6 +65,7 @@ public:
         std::ostringstream combinedStream;
 
         // Fold expression to combine all arguments into a single string
+        
         ((combinedStream << toString(args) << " "), ...); // Add a space after each argument
 
         std::string combinedString = combinedStream.str();
@@ -78,7 +80,10 @@ public:
 
 
     void logDisplayMessage(LogLevel msgLevel, const std::ostringstream& oss);
-
+    void increaseDepth() { ++depth; }
+    void decreaseDepth() { depth -= (depth > 0) ? 1 : 0; }
+    void setDepth(int newDepth) {depth = (newDepth >= 0) ? newDepth : 0;}
+    void resetDapth() { depth = 0; }
 
 private:
     std::string name_;
@@ -86,9 +91,10 @@ private:
     bool active_;
     mutable std::mutex mutex_;
     static std::mutex consoleMutex_; // Static mutex for console output synchronization
+
     std::weak_ptr<LogOption> parent_;
     std::vector<Ptr> children_;
-
+    int depth = 0;
     std::string GetLevelPrefix(LogLevel level);
 };
 

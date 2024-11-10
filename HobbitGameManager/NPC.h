@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "HobbitProcessAnalyzer.h"
+#include "../LogSystem/LogManager.h"
 #include <windows.h>
 class NPC
 {
@@ -52,12 +53,15 @@ public:
 
 	static HobbitProcessAnalyzer* hobbitProcessAnalyzer;
 private:
+	// Logs
+	LogOption::Ptr logOption_;
 	// Pointers
 	uint32_t objectAddress = 0;					// Object pointer
+	uint32_t objectPointer = 0;
+
 	std::vector<uint32_t> positionXAddress;		// Position X pointer
 	uint32_t rotationYAddress = 0;				// Rotation Y pointer
 	uint32_t animationAddress = 0;				// Animation pointer
-
 	// GUID of object
 	uint64_t guid = 0;
 	// Sets objects pointer of the NPC

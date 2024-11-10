@@ -20,7 +20,7 @@
 #include "../ServerClient/Client.h"
 #include "../HobbitGameManager/HobbitGameManager.h"
 #include "../HobbitGameManager/NPC.h"
-
+#include "../LogSystem/LogManager.h"
 #define ptrInventory 0x0075BDB0
 
 // Player classes
@@ -36,8 +36,11 @@ class ConnectedPlayer {
 
     std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
     std::queue<std::pair<uint8_t, float>> inventory;
+
+    LogOption::Ptr logOption_;
+
 public:
-    ConnectedPlayer()
+    ConnectedPlayer() : logOption_(LogManager::Instance().CreateLogOption("CONNECTED PLAYER"))
     {
 
     }
@@ -93,15 +96,12 @@ public:
             return;
 
         // Display the data
-        std::cout << "\033[33m";
-        std::cout << "Recieve the packet Send: " << std::endl;
-        std::cout << "Weapon" << int(weapon) << " || ";
-        std::cout << "X: " << position.x << " || ";
-        std::cout << "Y: " << position.y << " || ";
-        std::cout << "Z: " << position.z << " || ";
-        std::cout << "R: " << rotation.y << " || ";
-        std::cout << "A: " << animation << std::endl << std::endl;
-        std::cout << "\033[0m";
+        logOption_->LogMessage(LogLevel::Log_Debug, "Process Msg");
+        logOption_->increaseDepth();
+        logOption_->LogMessage(LogLevel::Log_Debug, "Anim", animation);
+        logOption_->LogMessage(LogLevel::Log_Debug, "Pos", position.x, position.y, position.z);
+        logOption_->LogMessage(LogLevel::Log_Debug, "RptY", rotation.y);
+        logOption_->LogMessage(LogLevel::Log_Debug, "Weapon", int(weapon));
 
         //set position, rotation, and animation
         npc.setPositionX(position.x);
@@ -146,9 +146,11 @@ public:
                 hurtEnemies.pop();
                 continue;
             }
-            std::cout << "\033[31mENEMY HURT!!  ";
-            std::cout << std::hex << hurtEnemies.front().first << std::dec << " " << hurtEnemies.front().second;
-            std::cout << "\033[0m";
+            logOption_->LogMessage(LogLevel::Log_Debug, "Enemy Hurt");
+            logOption_->increaseDepth();
+            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", hurtEnemies.front().first, "New Health:", hurtEnemies.front().second);
+            logOption_->decreaseDepth();
+
             //find by guid
             uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
 
@@ -169,10 +171,11 @@ public:
 
         while (!inventory.empty())
         {
-            std::cout << "\033[31mITEM CHANGE!!  ";
-            std::cout << std::hex << inventory.front().first * 0x4 + ptrInventory << std::dec << " " << inventory.front().second;
-            std::cout << "\033[0m";
-          
+            logOption_->LogMessage(LogLevel::Log_Debug, "Enemy Hurt");
+            logOption_->increaseDepth();
+            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", inventory.front().first * 0x4 + ptrInventory, "New Health:", hurtEnemies.front().second);
+            logOption_->decreaseDepth();
+
             //check if the object exist
             float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * inventory.front().first);
             if (value != inventory.front().second)
@@ -183,6 +186,7 @@ public:
             }
             inventory.pop();
         }
+        logOption_->decreaseDepth();
     }
 
 

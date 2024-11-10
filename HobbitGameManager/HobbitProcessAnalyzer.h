@@ -11,6 +11,7 @@
 #include<unordered_map>
 #include <iomanip>
 #include"ProcessAnalyzerTypeWrapped.h"
+#include "../LogSystem/LogManager.h"
 class HobbitProcessAnalyzer : public ProcessAnalyzerTypeWrapped
 {
 public:
@@ -29,7 +30,7 @@ public:
 
 	bool isProcessSet() {
 		if (hobbitProcess == nullptr)
-			std::cerr << "ERROR: Hobbit Process is NOT set" << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Error, "ERROR: Hobbit Process is NOT set");
 
 		return (hobbitProcess != nullptr);
 	}
@@ -89,7 +90,7 @@ public:
 			std::lock_guard<std::mutex> lock(objectStackMutex);
 			objectStackAddress = 0;
 			objectStackSize = 0;
-			std::cerr << "ERROR: Failed to read Object Stack Address from memory address 0x0076F648. Exception: " << e.what() << std::endl;
+			logOption_->LogMessage(LogLevel::Log_Warning, "Failed to read Object Stack Address from memory address 0x0076F648. Exception", e.what());
 		}
 	}
 
@@ -109,6 +110,29 @@ public:
 				if (objGUID == guid)
 				{
 					return objAddrs;
+				}
+			}
+		}
+		//hex
+		logOption_->LogMessage(LogLevel::Log_Warning, "Couldn't find", guid, " GUID in the Game Object Stack");
+		return 0;
+	}
+	uint32_t findGameObjStackByPtrGUID(uint64_t guid)
+	{
+		if (!isProcessSet()) return 0;
+
+		std::lock_guard<std::mutex> lock(objectStackMutex);
+
+		for (size_t offset = 0; offset < objectStackSize * OBJECT_PTR_SIZE; offset += OBJECT_PTR_SIZE) {
+			uint32_t objStackAddress = objectStackAddress + offset;
+			uint32_t objAddrs = readData<uint32_t>(hobbitProcess, reinterpret_cast<LPVOID>(objStackAddress));
+			if (objAddrs != 0)
+			{
+				uint32_t guidAddrs = objAddrs + 0x8;
+				uint64_t objGUID = readData<uint64_t>(hobbitProcess, reinterpret_cast<LPVOID>(guidAddrs));
+				if (objGUID == guid)
+				{
+					return objStackAddress;
 				}
 			}
 		}
@@ -227,9 +251,9 @@ public:
 
 		if (gameObjs.size() == 0)
 		{
-			std::cout << "WARNING: Couldn't find ";
-			for (T e : pattern) std::cout << e << "_";
-			std::cout << " Pattern in the Game Object Stack" << std::endl;
+			std::string warningMsg = "";
+			for (T e : pattern) warningMsg+= e + "_";
+			logOption_->LogMessage(LogLevel::Log_Warning, "WARNING: Couldn't find", warningMsg, "Pattern in the Game Object Stack");
 		}
 
 		return gameObjs;

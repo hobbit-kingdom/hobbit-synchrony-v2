@@ -6,26 +6,33 @@ void NPC::setHobbitProcessAnalyzer(HobbitProcessAnalyzer* newHobbitProcessAnalyz
 	hobbitProcessAnalyzer = newHobbitProcessAnalyzer;
 }
 
-//public
-
 // Constructors
-NPC::NPC() {
+NPC::NPC() : logOption_(LogManager::Instance().CreateLogOption("NPC")) {
+
 }
 void NPC::setNCP(uint64_t GUID)
 {
 	guid = GUID;
 	// Constructor message
-	std::cout << "~CreateNPC" << std::endl;
-	hobbitProcessAnalyzer->updateObjectStackAddress();
+	logOption_->LogMessage(LogLevel::Log_Debug, "Create NPC");
+	logOption_->increaseDepth();
+	//hobbitProcessAnalyzer->updateObjectStackAddress();
+
 	// read the pointers of instances
 	setObjectPtrByGUID(GUID);
+
+	if (objectAddress == 0)
+	{
+		logOption_->LogMessage(LogLevel::Log_Warning, "Object Address set to 0");
+		return;
+	}
+
 	setPositionXPtr();
 	setRotationYPtr();
 	setAnimationPtr();
-
 	float a = getHealth();
-	// end Constructor message
-	std::cout << std::endl;
+
+	logOption_->decreaseDepth();
 }
 
 // Returns object pointer
@@ -160,11 +167,11 @@ void NPC::setWeapon(uint32_t newWeapon)
 void NPC::setObjectPtrByGUID(uint64_t guid)
 {
 	objectAddress = hobbitProcessAnalyzer->findGameObjByGUID(guid);
+	objectPointer = hobbitProcessAnalyzer->findGameObjStackByPtrGUID(guid);
 
-	// Display new ObjAddress
-	std::cout << std::hex;
-	std::cout << "~ObjectPtr: " << objectAddress;
-	std::cout << std::dec << std::endl;
+	//hex
+	logOption_->LogMessage(LogLevel::Log_Debug, "ObjPointer: ", objectAddress);
+	logOption_->LogMessage(LogLevel::Log_Debug, "ObjAddress: ", objectAddress);
 }
 // Sets position X pointers of the NPC 
 void NPC::setPositionXPtr()
@@ -175,8 +182,6 @@ void NPC::setPositionXPtr()
 	// store object pointer
 	uint32_t ObjectPtr = getObjectPtr();
 
-	//0DEB3EBC
-	// 0x0deb3ea8 + 0xC + 0x8
 	// set current position pointer
 	positionXAddress.push_back(0xC + 0x8 + ObjectPtr);
 
@@ -190,22 +195,18 @@ void NPC::setPositionXPtr()
 	uint32_t animAdd4 = hobbitProcessAnalyzer->readData<uint32_t>(0x10C + animAdd3);
 	if (animAdd4 == 0) 
 	{
-		std::cout << "Health: " << getHealth() << std::endl;
+		logOption_->LogMessage(LogLevel::Log_Debug, "Health:", getHealth());
 	}
 	animationAddress = 0x8 + animAdd4;
 	positionXAddress.push_back(-0xC4 + animationAddress);
 
 	// Display the position X pointers Data
-	std::cout << std::hex;
 	for (uint32_t posxAdd : positionXAddress)
 	{
-		//dispplay the poistion Data
-		std::cout << "~Position Data:" << std::endl;
-		std::cout << "~posX: " << hobbitProcessAnalyzer->readData<float>(posxAdd) << std::endl;
-		std::cout << "~posXAddress: " << posxAdd << std::endl;
+		//hex
+		logOption_->LogMessage(LogLevel::Log_Debug, "Position X Address:", posxAdd);
+		logOption_->LogMessage(LogLevel::Log_Debug, "Position X:", hobbitProcessAnalyzer->readData<float>(posxAdd));
 	}
-	std::cout << std::dec;
-	std::cout << std::endl;
 }
 // Sets rotation Y pointer of the NPC 
 void NPC::setRotationYPtr()
@@ -217,12 +218,9 @@ void NPC::setRotationYPtr()
 	rotationYAddress = 0x64 + 0x8 + ObjectPtr;
 
 	// Display the rotation Y pointer Data
-	std::cout << std::hex;
-	std::cout << "~Rotation Data:" << std::endl;
-	std::cout << "~rotY: " << hobbitProcessAnalyzer->readData<float>(rotationYAddress) << std::endl;
-	std::cout << "~rotYAddress: " << rotationYAddress << std::endl;
-	std::cout << std::endl;
-	std::cout << std::dec;
+	//hex
+	logOption_->LogMessage(LogLevel::Log_Debug, "Rotation Y Address:", rotationYAddress);
+	logOption_->LogMessage(LogLevel::Log_Debug, "Rotation Y:", hobbitProcessAnalyzer->readData<float>(rotationYAddress));
 }
 // Sets animation pointer of the NPC
 void NPC::setAnimationPtr()
@@ -236,8 +234,7 @@ void NPC::setAnimationPtr()
 
 
 	// Display the animation pointer Data
-	std::cout << std::hex;
-	std::cout << "anim: " << hobbitProcessAnalyzer->readData<uint32_t>(animationAddress) << std::endl;
-	std::cout << "animAddress: " << animationAddress << std::endl;
-	std::cout << std::endl;
+	//hex
+	logOption_->LogMessage(LogLevel::Log_Debug, "Animation Address:", animationAddress);
+	logOption_->LogMessage(LogLevel::Log_Debug, "Animation:", hobbitProcessAnalyzer->readData<uint32_t>(animationAddress));
 }

@@ -68,7 +68,7 @@ void LogOption::logDisplayMessage(LogLevel msgLevel, const std::ostringstream& o
     
     std::string message = "";
     
-    if (msgLevel != LogLevel::Log_Prompt)
+    //if (msgLevel != LogLevel::Log_Prompt)
     {
         message = GetLevelPrefix(msgLevel);
         if (name_ != "")
@@ -76,6 +76,7 @@ void LogOption::logDisplayMessage(LogLevel msgLevel, const std::ostringstream& o
             message += "[" + name_ + "] ";
         }
     }
+    message += std::string(4 * depth, ' ');
     // Lock the console mutex to prevent overlapping output
     std::lock_guard<std::mutex> lock(consoleMutex_);
     std::cout << message << oss.str() << std::endl;
