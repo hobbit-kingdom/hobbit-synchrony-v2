@@ -21,7 +21,6 @@
 #include "../HobbitGameManager/HobbitGameManager.h"
 #include "../HobbitGameManager/NPC.h"
 #include "../LogSystem/LogManager.h"
-#define ptrInventory 0x0075BDB0
 
 // Player classes
 class ConnectedPlayer {
@@ -35,7 +34,6 @@ class ConnectedPlayer {
     int8_t weapon;
 
     std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
-    std::queue<std::pair<uint8_t, float>> inventory;
 
     LogOption::Ptr logOption_;
 
@@ -73,17 +71,6 @@ public:
             hurtEnemies.push(std::pair(guid, health));
         }
     }
-    void readProcessInventory(std::queue<uint8_t>& gameData)
-    {
-        uint32_t numberChangeInventory = convertQueueToType<uint32_t>(gameData);
-
-        for (int i = 0; i < numberChangeInventory; i++)
-        {
-            uint8_t item = convertQueueToType<uint8_t>(gameData);
-            float value = convertQueueToType<float>(gameData);
-            inventory.push(std::pair(item, value));
-        }
-    }
     void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
     {
         level = convertQueueToType<uint32_t>(gameData);
@@ -102,6 +89,7 @@ public:
         logOption_->LogMessage(LogLevel::Log_Debug, "Pos", position.x, position.y, position.z);
         logOption_->LogMessage(LogLevel::Log_Debug, "RptY", rotation.y);
         logOption_->LogMessage(LogLevel::Log_Debug, "Weapon", int(weapon));
+        logOption_->decreaseDepth();
 
         //set position, rotation, and animation
         npc.setPositionX(position.x);
@@ -169,24 +157,7 @@ public:
 
         }
 
-        while (!inventory.empty())
-        {
-            logOption_->LogMessage(LogLevel::Log_Debug, "Enemy Hurt");
-            logOption_->increaseDepth();
-            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", inventory.front().first * 0x4 + ptrInventory, "New Health:", hurtEnemies.front().second);
-            logOption_->decreaseDepth();
-
-            //check if the object exist
-            float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * inventory.front().first);
-            if (value != inventory.front().second)
-            {
-                hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * inventory.front().first, inventory.front().second);
-                inventory.pop();
-                continue;
-            }
-            inventory.pop();
-        }
-        logOption_->decreaseDepth();
+       
     }
 
 

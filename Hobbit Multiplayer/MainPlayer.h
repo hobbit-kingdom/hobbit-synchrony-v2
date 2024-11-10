@@ -27,6 +27,7 @@
 #define ptrInventory 0x0075BDB0
 
 class MainPlayer {
+
     HobbitProcessAnalyzer* hobbitProcessAnalyzer;
     uint32_t animation;
     Vector3 position, rotation;
@@ -114,7 +115,37 @@ public:
         }
         logOption_->decreaseDepth();
     }
+    void readProcessInventory(std::queue<uint8_t>& gameData)
+    {
+        uint32_t numberChangeInventory = convertQueueToType<uint32_t>(gameData);
+        std::queue<std::pair<uint8_t, float>> readInventory;
+        for (int i = 0; i < numberChangeInventory; i++)
+        {
+            uint8_t item = convertQueueToType<uint8_t>(gameData);
+            float value = convertQueueToType<float>(gameData);
+            readInventory.push(std::pair(item, value));
+        }
 
+        while (!readInventory.empty())
+        {
+            logOption_->LogMessage(LogLevel::Log_Debug, "Inventory Changed");
+            logOption_->increaseDepth();
+            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", readInventory.front().first * 0x4 + ptrInventory, "New Value:", readInventory.front().second);
+            logOption_->decreaseDepth();
+
+            //check if the object exist
+            float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * readInventory.front().first);
+            if (value != readInventory.front().second)
+            {
+                hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * readInventory.front().first, readInventory.front().second);
+                inventory.at(readInventory.front().first).second = readInventory.front().second;
+                readInventory.pop();
+                continue;
+            }
+            readInventory.pop();
+        }
+        logOption_->decreaseDepth();
+    }
 private:
     BaseMessage writeSnap()
     {

@@ -237,15 +237,7 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
         }
         else if (label == DataLabel::INVENTORY)
         {
-            auto it = std::find_if(std::begin(connectedPlayers), std::end(connectedPlayers),
-                [&](const ConnectedPlayer& p) { return p.id == senderID; });
-            if (it != std::end(connectedPlayers)) {
-                it->readProcessInventory(gameData);
-            }
-            else {
-                logOption_->LogMessage(LogLevel::Log_Error, "Unregistered player id", senderID);
-                connectedPlayers[0].readProcessInventory(gameData);
-            }
+            mainPlayer.readProcessInventory(gameData);
         }
         else
         {
