@@ -1,18 +1,14 @@
 #include "Client.h"
 
-
-Client::Client() : isConnected(false), logOption_(LogManager::Instance().CreateLogOption("CLIENT")) {
-}
+Client::Client() : isConnected(false), logOption_(LogManager::Instance().CreateLogOption("CLIENT")) {}
 Client::Client(std::string serverIP) : isConnected(false), logOption_(LogManager::Instance().CreateLogOption("CLIENT")) {
     if (!connectToServer(serverIP)) {
         std::cerr << "Failed to connect to server.\n";
     }
 }
 
-int Client::start()
-{
+int Client::start() {
     std::string serverIP;
-    
     logOption_->LogMessage(LogLevel::Log_Prompt, "Enter server IP address: ");
     std::cin >> serverIP;
 
@@ -22,12 +18,10 @@ int Client::start()
     }
 
     std::cin.ignore();
-
     return 0;
 }
 
-int Client::start(std::string serverIP)
-{
+int Client::start(std::string serverIP) {
     if (!connectToServer(serverIP)) {
         logOption_->LogMessage(LogLevel::Log_Error, "Failed to connect to server", serverIP);
         return 1;
@@ -35,9 +29,7 @@ int Client::start(std::string serverIP)
     return 0;
 }
 
-void Client::stop()
-{
-    // Disconnect from the server
+void Client::stop() {
     disconnect();
 }
 
@@ -47,171 +39,153 @@ bool Client::connectToServer(const std::string& serverIP) {
     WSAStartup(MAKEWORD(2, 2), &wsData);
 #endif
 
-    // Create a socket for the connection
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
     if (serverSocket == INVALID_SOCKET) {
         logOption_->LogMessage(LogLevel::Log_Error, "", "Issues creating socket");
-        return false; // Socket creation failed
+        return false;
     }
 
-    // Set up server address structure
     sockaddr_in serverHint{};
     serverHint.sin_family = AF_INET;
     serverHint.sin_port = htons(PORT);
-    inet_pton(AF_INET, serverIP.c_str(), &serverHint.sin_addr); // Correctly convert IP string to address
+    inet_pton(AF_INET, serverIP.c_str(), &serverHint.sin_addr);
 
-    // Attempt to connect to the server
     if (connect(serverSocket, (sockaddr*)&serverHint, sizeof(serverHint)) == SOCKET_ERROR) {
         logOption_->LogMessage(LogLevel::Log_Error, "", "Cannot connect to server");
-        return false; // Connection failed
+        return false;
     }
 
-    isConnected = true; // Mark as connected
-
-    // Start a thread to receive messages
+    isConnected = true;
     receiveThread = std::thread(&Client::receiveMessages, this);
-    receiveThread.detach(); // Detach the thread
+    receiveThread.detach();
     logOption_->LogMessage(LogLevel::Log_Info, "", "Connected to server");
-
-    return true; // Connection successful
+    return true;
 }
-void Client::disconnect() {
-    isConnected = false; // Mark as disconnected
 
+void Client::disconnect() {
+    isConnected = false;
     if (receiveThread.joinable())
-        receiveThread.join(); // Join the thread
+        receiveThread.join();
     else
         return;
-    closesocket(serverSocket); // Close the socket
+    closesocket(serverSocket);
 #ifdef _WIN32
-    WSACleanup(); // Clean up Winsock on Windows
+    WSACleanup();
 #endif
 }
-
 
 void Client::receiveMessages() {
     while (isConnected) {
         uint32_t msgSize;
-
-        // Receive message size
         int bytesReceived = recv(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
         if (bytesReceived <= 0) {
             logOption_->LogMessage(LogLevel::Log_Error, "", "Server is down or connection lost.");
-            notifyServerDown(); // Custom function to handle disconnection
-            break; // Exit loop if no bytes received
+            notifyServerDown();
+            break;
         }
-        msgSize = ntohl(msgSize); // Convert size back to host byte order
+        msgSize = ntohl(msgSize);
 
         std::vector<uint8_t> buffer(msgSize);
         size_t totalReceived = 0;
-
-        // Receive the entire message
         while (totalReceived < msgSize) {
             bytesReceived = recv(serverSocket, (char*)buffer.data() + totalReceived, msgSize - totalReceived, 0);
-            if (bytesReceived <= 0) {
-                break; // Exit if no bytes received
-            }
-            totalReceived += bytesReceived; // Update total received
+            if (bytesReceived <= 0) break;
+            totalReceived += bytesReceived;
         }
-        if (bytesReceived <= 0) {
-            break; // Exit if no bytes received
-        }
+        if (bytesReceived <= 0) break;
 
-        // Deserialize the message
         BaseMessage* msg = BaseMessage::deserializeMessage(buffer);
         if (msg) {
-
-            if (msg->messageType == CLIENT_LIST_MESSAGE) { // Handle client list update
-                BaseMessage* clm = static_cast<BaseMessage*>(msg);
-                updateClientList(clm->message);
+            if (msg->messageType == CLIENT_LIST_MESSAGE) {
+                updateClientList(msg->message);
             }
             else {
-                sortMessageByType(msg); // Sort other message types
+                sortMessageByType(msg);
             }
             delete msg;
         }
     }
-
-    disconnect(); // Ensure disconnection on exit
+    disconnect();
 }
+
 void Client::sendMessage(const BaseMessage& msg) {
     std::vector<uint8_t> buffer;
-    BaseMessage::serializeMessage(msg, buffer); // Serialize the message
-
-    uint32_t msgSize = htonl(buffer.size()); // Convert size to network byte order
-
-    // Send message size and message data
+    BaseMessage::serializeMessage(msg, buffer);
+    uint32_t msgSize = htonl(buffer.size());
     send(serverSocket, (char*)&msgSize, sizeof(msgSize), 0);
     send(serverSocket, (char*)buffer.data(), buffer.size(), 0);
 }
 
 void Client::sortMessageByType(BaseMessage* msg) {
-    std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread safety
-
-    // Sort messages based on their type
+    std::lock_guard<std::mutex> lock(messageMutex);
     switch (msg->messageType) {
-    case TEXT_MESSAGE: {
-        BaseMessage* tm = static_cast<BaseMessage*>(msg);
-        textMessages.push_back(*tm); // Store text message
+    case TEXT_MESSAGE:
+        textMessages.push_back(*msg);
         break;
-    }
-    case EVENT_MESSAGE: {
-        BaseMessage* em = static_cast<BaseMessage*>(msg);
-        eventMessages.push_back(*em); // Store event message
+    case EVENT_MESSAGE:
+        eventMessages.push_back(*msg);
         break;
-    }
-    case SNAPSHOT_MESSAGE: {
-        BaseMessage* sm = static_cast<BaseMessage*>(msg);
-        snapshotMessages[sm->senderID] = *sm; // Store snapshot message by sender ID
+    case SNAPSHOT_MESSAGE:
+        snapshotMessages[msg->senderID] = *msg;
         break;
-    }
-    case CLIENT_LIST_MESSAGE: {
-        BaseMessage* cl = static_cast<BaseMessage*>(msg);
-        updateClientList(cl->message); // Update client list with new IDs
-        break;
-    }
-    case CLIENT_ID_MESSAGE: {
-        BaseMessage* idMsg = static_cast<BaseMessage*>(msg);
-        clientID = idMsg->senderID; // Store assigned client ID
+    case CLIENT_ID_MESSAGE:
+        clientID = msg->senderID;
         logOption_->LogMessage(LogLevel::Log_Debug, "", "Assigned client ID: ", int(clientID));
         break;
     }
-    }
 }
 
-void Client::updateClientList(const std::queue<uint8_t>& clientIDs) {
-    std::lock_guard<std::mutex> lock(messageMutex); // Lock for thread safety
+void Client::updateClientList(const std::queue<uint8_t>& data) {
+    std::queue<uint8_t> temp = data;
+    std::vector<ClientInfo> clientInfos;
 
-    // Clear the existing connected clients queue
-    connectedClients = std::queue<uint8_t>();
+    while (!temp.empty()) {
+        ClientInfo info;
+        if (temp.empty()) break;
+        info.clientID = temp.front();
+        temp.pop();
 
-    // Update the connected clients list with new data
-    std::queue<uint8_t> tempQueue = clientIDs; // Create a copy of the input queue
-    while (!tempQueue.empty()) {
-        connectedClients.push(tempQueue.front()); // Add each client ID to the connected clients queue
-        logOption_->LogMessage(LogLevel::Log_Debug, "", std::to_string(tempQueue.front()));
-        tempQueue.pop(); // Remove the processed client ID
+        if (temp.empty()) break;
+        uint8_t ipLen = temp.front();
+        temp.pop();
+
+        std::string ip;
+        for (int i = 0; i < ipLen; ++i) {
+            if (temp.empty()) break;
+            ip += static_cast<char>(temp.front());
+            temp.pop();
+        }
+        info.ipAddress = ip;
+
+        if (temp.size() < 2) break;
+        uint8_t b1 = temp.front(); temp.pop();
+        uint8_t b2 = temp.front(); temp.pop();
+        info.port = ntohs((b1 << 8) | b2);
+
+        clientInfos.push_back(info);
     }
 
-    // Notify all listeners about the updated client list
+    std::lock_guard<std::mutex> lock(messageMutex);
+    connectedClientsInfo.clear();
+    for (const auto& info : clientInfos) {
+        connectedClientsInfo[info.clientID] = info;
+    }
+
+    std::queue<uint8_t> clientIDs;
+    for (const auto& pair : connectedClientsInfo) {
+        clientIDs.push(pair.first);
+    }
     for (const auto& listener : listeners) {
-        // Convert the queue to a vector for passing to the listener
-        std::queue<uint8_t> clientIDVector;
-        std::queue<uint8_t> tempForListener = connectedClients; // Create a copy for the listener
-        while (!tempForListener.empty()) {
-            clientIDVector.push(tempForListener.front());
-            tempForListener.pop();
-        }
-        listener(clientIDVector); // Call each listener with the updated client IDs
+        listener(clientIDs);
     }
 }
 
 void Client::addListener(std::function<void(const std::queue<uint8_t>&)> listener) {
-    listeners.push_back(listener); // Add a new listener to the list
+    listeners.push_back(listener);
 }
 
 void Client::notifyServerDown() {
-    isConnected = false; // Set connection flag to false
-    logOption_->LogMessage(LogLevel::Log_Info, "","Disconnected from server. Please check the server status.");
+    isConnected = false;
+    logOption_->LogMessage(LogLevel::Log_Info, "", "Disconnected from server. Please check the server status.");
     updateClientList(std::queue<uint8_t>());
 }

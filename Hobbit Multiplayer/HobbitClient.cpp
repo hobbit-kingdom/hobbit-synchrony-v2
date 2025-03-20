@@ -1,17 +1,18 @@
 #include "HobbitClient.h"
 
 HobbitClient::HobbitClient(std::string initialServerIp)
-	: serverIp(std::move(initialServerIp)), running(false), processMessages(false), logOption_(LogManager::Instance().CreateLogOption("HOBBIT CLIENT")) {
+	: serverIp(std::move(initialServerIp)), running(false), processMessages(false),
+	logOption_(LogManager::Instance().CreateLogOption("HOBBIT CLIENT")) {
 
 	LogManager::Instance().MoveLogOption("CLIENT", "HOBBIT CLIENT");
 	LogManager::Instance().MoveLogOption("HOBBIT GAME MANAGER", "HOBBIT CLIENT");
 
-	for (auto& e : connectedPlayers)
-	{
+	for (auto& e : connectedPlayers) {
 		e.setHobbitProcessAnalyzer(hobbitGameManager);
 	}
 	mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager);
 }
+
 
 HobbitClient::~HobbitClient() { stop(); }
 int HobbitClient::start() {
@@ -68,7 +69,6 @@ int HobbitClient::start(const std::string& ip) {
 
 	updateThread = std::thread(&HobbitClient::update, this);
 	return 0;
-
 }
 
 void HobbitClient::stop() {
@@ -79,8 +79,7 @@ void HobbitClient::stop() {
 	if (updateThread.joinable()) {
 		updateThread.join();
 	}
-}
-void HobbitClient::update() {
+}void HobbitClient::update() {
 	while (running) {
 		if (processMessages)
 		{
@@ -227,15 +226,19 @@ void HobbitClient::onOpenGame()
 }
 
 
-void HobbitClient::onClientListUpdate(const std::queue<uint8_t>&) {
-	std::queue<uint8_t> connectedClients = client.getConnectedClients();
-	running = (connectedClients.size() != 0);
+// Modified onClientListUpdate to use listener parameter
+void HobbitClient::onClientListUpdate(const std::queue<uint8_t>& clientIDs) {
+	running = !clientIDs.empty();
+
+	// Create a copy of the client IDs queue
+	std::queue<uint8_t> connectedClients = clientIDs;
 
 	for (int i = 0; i < MAX_PLAYERS; ++i) {
 		connectedPlayers[i].id = connectedClients.empty() ? -1 : connectedClients.front();
-		if (!connectedClients.empty()) connectedClients.pop(); // Remove the front element from the queue
+		if (!connectedClients.empty()) {
+			connectedClients.pop();
+		}
 	}
-
 }
 std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
 	std::ifstream file;
