@@ -14,12 +14,20 @@
 class HobbitMultiplayer
 {
 public:
+	HobbitMultiplayer() :logOption_(LogManager::Instance().CreateLogOption("HOBBIT MULTIPLAYER"))
+	{
+		LogManager::Instance().MoveLogOption("SERVER", "HOBBIT MULTIPLAYER");
+		LogManager::Instance().MoveLogOption("HOBBIT CLIENT", "HOBBIT MULTIPLAYER");
+		LogManager::Instance().DisplayHierarchy();
+	}
 	int mainMenu();
 	int startMenu();
 
 	void startServer();
-	void startClient();
-	void sstartServerClient();
+	void stopServer();
+	int startClient(const std::string& ip = "");
+	void stopClient();
+	void startServerClient();
 
 	LogOption::Ptr logOption_;
 	Server server;

@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.11.35327.3
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Hobbit Multiplayer", "Hobbit Multiplayer\Hobbit Multiplayer.vcxproj", "{3E42E990-7D79-4634-9F96-45E9B6460193}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HobbitMultiplayer", "Hobbit Multiplayer\Hobbit Multiplayer.vcxproj", "{3E42E990-7D79-4634-9F96-45E9B6460193}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ServerClient", "ServerClient\ServerClient.vcxproj", "{2B65B66B-A9E5-40B8-9774-5DAF73B3AF6E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HobbitGameManager", "HobbitGameManager\HobbitGameManager.vcxproj", "{B65392C7-3BDC-4606-8FF1-E2160FE8867D}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "LogSystem", "LogSystem\LogSystem.vcxproj", "{4C528233-ACA8-414F-8896-23C5CA950DA0}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HobbitMultiplayerWindowed", "HobbitMultiplayerWindowed\HobbitMultiplayerWindowed.vcxproj", "{CAB3B9ED-4AB1-41C8-AD51-045C16793469}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,6 +53,14 @@ Global
 		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x64.Build.0 = Release|x64
 		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x86.ActiveCfg = Release|Win32
 		{4C528233-ACA8-414F-8896-23C5CA950DA0}.Release|x86.Build.0 = Release|Win32
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Debug|x64.ActiveCfg = Debug|x64
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Debug|x64.Build.0 = Debug|x64
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Debug|x86.ActiveCfg = Debug|Win32
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Debug|x86.Build.0 = Debug|Win32
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Release|x64.ActiveCfg = Release|x64
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Release|x64.Build.0 = Release|x64
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Release|x86.ActiveCfg = Release|Win32
+		{CAB3B9ED-4AB1-41C8-AD51-045C16793469}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

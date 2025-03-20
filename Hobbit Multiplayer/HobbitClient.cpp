@@ -2,6 +2,10 @@
 
 HobbitClient::HobbitClient(std::string initialServerIp)
 	: serverIp(std::move(initialServerIp)), running(false), processMessages(false), logOption_(LogManager::Instance().CreateLogOption("HOBBIT CLIENT")) {
+
+	LogManager::Instance().MoveLogOption("CLIENT", "HOBBIT CLIENT");
+	LogManager::Instance().MoveLogOption("HOBBIT GAME MANAGER", "HOBBIT CLIENT");
+
 	for (auto& e : connectedPlayers)
 	{
 		e.setHobbitProcessAnalyzer(hobbitGameManager);

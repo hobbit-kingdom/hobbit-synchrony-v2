@@ -48,7 +48,7 @@ int HobbitMultiplayer::startMenu()
 			startClient();
 			break;
 		case '3':
-			sstartServerClient();
+			startServerClient();
 			break;
 		default:
 			logOption_->LogMessage(LogLevel::Log_Error, "This Menu Option was not available");
@@ -68,13 +68,17 @@ void HobbitMultiplayer::startServer()
 	}
 
 	server.stop();
-	logOption_->LogMessage(LogLevel::Log_Info, "Server Started");
-
+	logOption_->LogMessage(LogLevel::Log_Info, "Server Stoped");
 }
-void HobbitMultiplayer::startClient()
+
+void HobbitMultiplayer::stopServer() {
+	if (server.getIsRunning())
+		server.stop();
+}
+int HobbitMultiplayer::startClient(const std::string& ip)
 {
-	if (hobbitClient.start())
-		return;
+	if (hobbitClient.start(ip))
+		return 1;
 	logOption_->LogMessage(LogLevel::Log_Info, "Client Started");
 
 	while (hobbitClient.isRunning()) {
@@ -83,9 +87,14 @@ void HobbitMultiplayer::startClient()
 
 	hobbitClient.stop();
 	logOption_->LogMessage(LogLevel::Log_Info, "Client Stoped");
+	return 0;
 }
-
-void HobbitMultiplayer::sstartServerClient()
+void HobbitMultiplayer::stopClient()
+{
+	if(hobbitClient.isRunning())
+		hobbitClient.stop();
+}
+void HobbitMultiplayer::startServerClient()
 {
 	server.start();
 	logOption_->LogMessage(LogLevel::Log_Info, "Server Started");

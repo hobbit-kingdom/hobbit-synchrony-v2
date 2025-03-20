@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <limits>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -31,23 +32,14 @@ public:
     LogOption(const std::string& name, LogLevel level = LogLevel::Log_Info);
 
     void AddChild(const Ptr& child);
-
     void RemoveChild(const Ptr& child);
-
     void ToggleStatus();
-
     void SetStatus(bool active);
-
     bool IsActive() const;
-
     std::string GetName() const;
-
     LogLevel GetLevel() const;
-
     void SetLevel(LogLevel level);
-
     Ptr GetParent() const;
-
     std::vector<Ptr> GetChildren() const;
 
     // Function to convert any type to string
@@ -168,7 +160,66 @@ public:
     }
 
 private:
-    LogManager() : globalLogLevel_(LogLevel::Log_Debug) {}
+    
+    LogManager() : globalLogLevel_(LogLevel::Log_Debug) {
+#ifdef _WIN32
+        if (!GetConsoleWindow()) {
+            // Create new console and set up unique buffers
+            AllocConsole();
+
+            // Redirect standard I/O streams to new console
+            RedirectIOToNewConsole();
+
+            // Clear all buffers
+            ClearBuffers();
+        }
+#endif
+    }
+
+#ifdef _WIN32
+    void RedirectIOToNewConsole() {
+        // Get new console handles
+        HANDLE hConOut = GetStdHandle(STD_OUTPUT_HANDLE);
+        HANDLE hConIn = GetStdHandle(STD_INPUT_HANDLE);
+        HANDLE hConErr = GetStdHandle(STD_ERROR_HANDLE);
+
+        // Create unique buffers for this console
+        FILE* fDummy;
+        freopen_s(&fDummy, "CONOUT$", "w", stdout);  // Redirect stdout
+        freopen_s(&fDummy, "CONOUT$", "w", stderr);   // Redirect stderr
+        freopen_s(&fDummy, "CONIN$", "r", stdin);     // Redirect stdin
+
+
+        // Ensure synchronization between C and C++ streams
+        std::ios::sync_with_stdio(true);
+    }
+
+    void ClearBuffers() {
+        // Clear output buffers
+        std::cout.flush();
+        std::cerr.flush();
+        std::clog.flush();
+
+        // Clear C buffers
+        fflush(stdout);
+        fflush(stderr);
+
+        // Clear input buffer
+        HANDLE hConIn = GetStdHandle(STD_INPUT_HANDLE);
+        FlushConsoleInputBuffer(hConIn);
+        fflush(stdin);
+
+        // Reset stream states
+        std::cout.clear();
+        std::cerr.clear();
+        std::clog.clear();
+        std::cin.clear();
+    }
+#endif
+
+
+
+
 
     LogManager(const LogManager&) = delete;
     LogManager& operator=(const LogManager&) = delete;
