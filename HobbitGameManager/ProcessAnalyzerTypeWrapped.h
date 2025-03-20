@@ -8,6 +8,8 @@
 
 #include<iostream>
 #include<vector>
+#include <cstring>
+#include <type_traits>
 
 #include <cstdint> 
 #include "ProcessAnalyzer.h"
@@ -108,8 +110,11 @@ public:
 
 	template <typename T>
 	std::vector<T> convertToVector(const std::vector<uint8_t>& data) {
-		if (T == uint8_t)
-			return data;
+		
+		if constexpr (std::is_same<T, uint8_t>::value) {
+			// If T is uint8_t, return a vector of uint8_t
+			return std::vector<T>(data.begin(), data.end());
+		}
 
 		size_t numElements = data.size() / sizeof(T);
 		std::vector<T> result(numElements);

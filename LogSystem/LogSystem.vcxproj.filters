@@ -7,7 +7,6 @@
     <ClInclude Include="LogManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LogOption.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
@@ -21,5 +20,6 @@
     <ClCompile Include="LogManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LogUtilities.cpp" />
   </ItemGroup>
 </Project>

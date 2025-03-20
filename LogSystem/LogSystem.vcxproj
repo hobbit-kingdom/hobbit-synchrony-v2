@@ -132,11 +132,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="LogManager.h" />
-    <ClInclude Include="LogOption.h" />
     <ClInclude Include="Utilities.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="LogManager.cpp" />
+    <ClCompile Include="LogUtilities.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
