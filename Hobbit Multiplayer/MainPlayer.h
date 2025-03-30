@@ -268,7 +268,8 @@ private:
                 dataVec[1] += sizeof(uint8_t);
 
                 //Значение
-                pushTypeToVector(inventory[i].second - hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i) , dataVec);
+                pushTypeToVector(hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i) - inventory[i].second , dataVec);
+                inventory[i].second = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
                 dataVec[1] += sizeof(float);
 
                 ++inventorySend;
