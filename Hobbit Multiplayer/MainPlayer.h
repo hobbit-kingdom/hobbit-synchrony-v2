@@ -26,6 +26,7 @@
 
 #define ptrInventory 0x0075BDB0
 
+#define EVENT_EYSN TRUE
 class MainPlayer {
 
     HobbitProcessAnalyzer* hobbitProcessAnalyzer;
@@ -84,6 +85,7 @@ public:
     }
 
     void readPtrs() {
+
         //Biblbo Pointers
         bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
         bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
@@ -133,15 +135,9 @@ public:
             logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", readInventory.front().first * 0x4 + ptrInventory, "New Value:", readInventory.front().second);
             logOption_->decreaseDepth();
 
-            //check if the object exist
             float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * readInventory.front().first);
-            if (value != readInventory.front().second)
-            {
-                hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * readInventory.front().first, readInventory.front().second);
-                inventory.at(readInventory.front().first).second = readInventory.front().second;
-                readInventory.pop();
-                continue;
-            }
+            inventory.at(readInventory.front().first).second += readInventory.front().second;
+            hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * readInventory.front().first, inventory.at(readInventory.front().first).second);
             readInventory.pop();
         }
         logOption_->decreaseDepth();
@@ -182,6 +178,8 @@ private:
     }
     BaseMessage writeEnemiesEvent()
     {
+        if (!EVENT_EYSN)
+            return BaseMessage(); // if not enabled return empty message
         BaseMessage msg(EVENT_MESSAGE, 0);
         std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::ENEMIES_HEALTH), 0 };
 
@@ -206,7 +204,7 @@ private:
                 pushTypeToVector(hobbitProcessAnalyzer->readData<uint64_t>(enemies[i].first + 0x8), dataVec);
                 dataVec[1] += sizeof(uint64_t);
 
-                //Heath
+                //Heath change
                 pushTypeToVector(enemies[i].second, dataVec);
                 dataVec[1] += sizeof(float);
 
@@ -230,6 +228,9 @@ private:
     }
     BaseMessage writeInventoryEvent()
     {
+        if (!EVENT_EYSN)
+			return BaseMessage(); // if not enabled return empty message
+
         BaseMessage msg(EVENT_MESSAGE, 0);
         std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::INVENTORY), 0 };
 
@@ -260,13 +261,14 @@ private:
                 logOption_->increaseDepth();
                 logOption_->LogMessage(LogLevel::Log_Debug, "Value: Before", inventory[i].second, "After", hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i));
                 logOption_->decreaseDepth();
-                inventory[i].second = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
+
+                //inventory[i].second = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
                 //Множитель указателя инвенторя
                 pushTypeToVector(i, dataVec);
                 dataVec[1] += sizeof(uint8_t);
 
                 //Значение
-                pushTypeToVector(inventory[i].second, dataVec);
+                pushTypeToVector(inventory[i].second - hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i) , dataVec);
                 dataVec[1] += sizeof(float);
 
                 ++inventorySend;
