@@ -247,7 +247,7 @@ private:
             else if (i > 25 and i < 28) i = 28;
             else if (i == 46) i++;
             else if (i == 50) i = 52;
-            if ((inventory[i].second != hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i) and i <53) or (i>=53 and inventory[i].second > hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i)))
+            if ((inventory[i].second != hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i) and i <53) or (i>=53 and inventory[i].second >= hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i)))
             {
                 if (i == 6 and inventory[i].second > hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i))
                     continue;
