@@ -16,6 +16,7 @@
 #include <fstream>
 #include <iostream>
 #include <iomanip>
+#include <unordered_set>
 
 #include "../ServerClient/Client.h"
 #include "../HobbitGameManager/HobbitGameManager.h"
@@ -37,8 +38,12 @@ public:
 	void stop();
 
 	bool isRunning() { return running; }
-
+	// Add these methods
+	std::map<DataLabel, bool> getMessageLabelStates() const;
+	void setMessageLabelProcessing(DataLabel label, bool enable);
 private:
+	std::map<DataLabel, bool> messageLabelStates;
+
 	LogOption::Ptr logOption_;
 	Client client;
 	HobbitGameManager hobbitGameManager;

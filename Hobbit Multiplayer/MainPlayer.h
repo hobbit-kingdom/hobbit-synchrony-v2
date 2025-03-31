@@ -25,6 +25,7 @@
 #include "../LogSystem/LogManager.h"
 
 #define ptrInventory 0x0075BDB0
+#define ptrLevel 0x0075BDB0
 
 #define EVENT_EYSN TRUE
 class MainPlayer {
@@ -102,7 +103,7 @@ public:
                 continue;
             //hex
             logOption_->LogMessage(LogLevel::Log_Debug, "Address:", e, "Health: ", hobbitProcessAnalyzer->readData<float>(e + 0x290));
-            enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290)));
+            enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290))); // address and health
         }
         logOption_->decreaseDepth();
         logOption_->LogMessage(LogLevel::Log_Debug, "Enemis Foud:", enemies.size());
@@ -137,11 +138,65 @@ public:
 
             float value = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * readInventory.front().first);
             inventory.at(readInventory.front().first).second += readInventory.front().second;
+            if (inventory.at(readInventory.front().first).second < 0)
+                inventory.at(readInventory.front().first).second = 0;
             hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * readInventory.front().first, inventory.at(readInventory.front().first).second);
             readInventory.pop();
         }
         logOption_->decreaseDepth();
     }
+    void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
+        uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
+
+
+        for (int i = 0; i < numberHurtEnemies; ++i)
+        {
+            uint64_t guid = convertQueueToType<uint64_t>(gameData);
+            float health = convertQueueToType<float>(gameData);
+            std::pair enemyNewHealth = std::make_pair(guid, health);
+
+            if (enemyNewHealth.first == 0)
+                continue;
+
+            logOption_->LogMessage(LogLevel::Log_Debug, "Enemy Hurt");
+            logOption_->increaseDepth();
+            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", enemyNewHealth.first, "New Health:", enemyNewHealth.second);
+            logOption_->decreaseDepth();
+
+            //find by guid
+            uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(enemyNewHealth.first);
+
+            //check if the object exist
+            if (objAddrs != 0)
+            {
+                float health = hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
+                for (auto& enemy : enemies)
+                {
+                    uint64_t a = hobbitProcessAnalyzer->readData<uint64_t>(enemy.first + 0x8);
+                    
+                    if (a == enemyNewHealth.first)
+                    {
+						enemy.second = health + enemyNewHealth.second;
+                        hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, enemyNewHealth.second);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
+    {
+        uint32_t newLevel = convertQueueToType<uint32_t>(gameData);
+		if (level != newLevel)
+		{
+			logOption_->LogMessage(LogLevel::Log_Debug, "Level Changed", "Before", level, "After", newLevel);
+			level = newLevel;
+            //changing level logic here
+            //[missing] will be implemented in the future
+		}
+        gameData.pop();
+    }
+
 private:
     BaseMessage writeSnap()
     {
@@ -192,22 +247,22 @@ private:
         for (int i = 0; i < enemies.size(); ++i)
         {
 
-            if (enemies[i].second > hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290))
+            if (enemies[i].second != hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290))
             {
                 logOption_->LogMessage(LogLevel::Log_Debug, "Write Enemy Address", enemies[i].first);
                 logOption_->increaseDepth();
                 logOption_->LogMessage(LogLevel::Log_Debug, "Heath: Before", enemies[i].second, "After", hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290));
                 logOption_->decreaseDepth();
                 
-                enemies[i].second = hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
                 //GUID
                 pushTypeToVector(hobbitProcessAnalyzer->readData<uint64_t>(enemies[i].first + 0x8), dataVec);
                 dataVec[1] += sizeof(uint64_t);
 
                 //Heath change
-                pushTypeToVector(enemies[i].second, dataVec);
+                pushTypeToVector(hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290) - enemies[i].second, dataVec);
                 dataVec[1] += sizeof(float);
 
+                enemies[i].second = hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
                 ++enemisSend;
             }
         }
@@ -267,6 +322,7 @@ private:
                 pushTypeToVector(i, dataVec);
                 dataVec[1] += sizeof(uint8_t);
 
+      
                 //Значение
                 pushTypeToVector(hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i) - inventory[i].second , dataVec);
                 inventory[i].second = hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * i);
@@ -290,6 +346,44 @@ private:
         else
             return BaseMessage();
     }
+    BaseMessage writeChangeLevelEvent()
+    {
+        if (!EVENT_EYSN)
+            return BaseMessage(); // if not enabled return empty message
+
+        BaseMessage msg(EVENT_MESSAGE, 0);
+        std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::CONNECTED_PLAYER_LEVEL), 0 };
+
+        // amount of enemies send
+        uint32_t inventorySend = 0;
+        pushTypeToVector(inventorySend, dataVec);
+
+        dataVec[1] += sizeof(uint32_t);
+
+        if (level != hobbitProcessAnalyzer->readData<float>(ptrLevel))
+        {
+            //hex
+            logOption_->LogMessage(LogLevel::Log_Debug, "Value: Before: ", level, "After: ", hobbitProcessAnalyzer->readData<float>(ptrLevel));
+            logOption_->decreaseDepth();
+
+            //push current level
+            pushTypeToVector(level, dataVec);
+            dataVec[1] += sizeof(uint32_t);
+
+            level = hobbitProcessAnalyzer->readData<float>(ptrLevel);
+            //push next level
+            pushTypeToVector(level, dataVec);
+            dataVec[1] += sizeof(uint32_t);
+
+            //Convert vector to queue
+            for (const int& element : dataVec) {
+                msg.message.push(element);
+            }
+            return msg;
+        }
+        return BaseMessage();
+    }
+
     void processData()
     {
         position.x = hobbitProcessAnalyzer->readData<float>(0x7C4 + bilboPosXPTR);
@@ -297,6 +391,8 @@ private:
         position.z = hobbitProcessAnalyzer->readData<float>(0x7CC + bilboPosXPTR);
         rotation.y = hobbitProcessAnalyzer->readData<float>(0x7AC + bilboPosXPTR);
         animation = hobbitProcessAnalyzer->readData<uint32_t>(bilboAnimPTR);
+        if (!(animation >= 0 && animation <= 200))
+            animation = 1;
 
         bilboAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x530);
         bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C);

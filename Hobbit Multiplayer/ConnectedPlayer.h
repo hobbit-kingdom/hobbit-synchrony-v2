@@ -33,7 +33,6 @@ class ConnectedPlayer {
 	uint32_t levels;
 	int8_t weapon;
 
-	std::queue<std::pair<uint64_t, float>> hurtEnemies;// pair <guid, Health>
 
 	LogOption::Ptr logOption_;
 
@@ -59,22 +58,6 @@ public:
 		position.z = convertQueueToType<float>(gameData);
 		rotation.y = convertQueueToType<float>(gameData);
 		weapon = convertQueueToType<int8_t>(gameData);
-	}
-	void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
-		uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
-
-
-		for (int i = 0; i < numberHurtEnemies; ++i)
-		{
-			uint64_t guid = convertQueueToType<uint64_t>(gameData);
-			float health = convertQueueToType<float>(gameData);
-			hurtEnemies.push(std::pair(guid, health));
-		}
-	}
-	void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
-	{
-		level = convertQueueToType<uint32_t>(gameData);
-		gameData.pop();
 	}
 
 	void processPlayer(uint8_t myId)
@@ -123,40 +106,6 @@ public:
 			if (addrsGuidNone)
 				npc.setWeapon(hobbitProcessAnalyzer->readData<uint32_t>(addrsGuidNone + 0x260));
 		}
-
-
-
-		// Update Health of Enemies
-		while (!hurtEnemies.empty())
-		{
-			if (hurtEnemies.front().first == 0)
-			{
-				hurtEnemies.pop();
-				continue;
-			}
-			logOption_->LogMessage(LogLevel::Log_Debug, "Enemy Hurt");
-			logOption_->increaseDepth();
-			logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", hurtEnemies.front().first, "New Health:", hurtEnemies.front().second);
-			logOption_->decreaseDepth();
-
-			//find by guid
-			uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(hurtEnemies.front().first);
-
-			//check if the object exist
-			if (objAddrs != 0)
-			{
-				float health = hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
-				if (health > hurtEnemies.front().second)
-				{
-					hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, hurtEnemies.front().second);
-					hurtEnemies.pop();
-					continue;
-				}
-			}
-			hurtEnemies.pop();
-
-		}
-
 
 	}
 

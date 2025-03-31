@@ -11,8 +11,23 @@ HobbitClient::HobbitClient(std::string initialServerIp)
 		e.setHobbitProcessAnalyzer(hobbitGameManager);
 	}
 	mainPlayer.setHobbitProcessAnalyzer(hobbitGameManager);
+
+	messageLabelStates[DataLabel::SERVER] = true;
+	messageLabelStates[DataLabel::CONNECTED_PLAYER_SNAP] = true;
+	messageLabelStates[DataLabel::ENEMIES_HEALTH] = true;
+	messageLabelStates[DataLabel::CONNECTED_PLAYER_LEVEL] = true;
+	messageLabelStates[DataLabel::INVENTORY] = true;
+
 }
 
+// Add new methods:
+std::map<DataLabel, bool> HobbitClient::getMessageLabelStates() const {
+	return messageLabelStates;
+}
+
+void HobbitClient::setMessageLabelProcessing(DataLabel label, bool enable) {
+	messageLabelStates[label] = enable;
+}
 
 HobbitClient::~HobbitClient() { stop(); }
 int HobbitClient::start() {
@@ -79,7 +94,8 @@ void HobbitClient::stop() {
 	if (updateThread.joinable()) {
 		updateThread.join();
 	}
-}void HobbitClient::update() {
+}
+void HobbitClient::update() {
 	while (running) {
 		if (processMessages)
 		{
@@ -94,6 +110,7 @@ void HobbitClient::stop() {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 			continue;
 		}
+
 		readMessage();
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
@@ -106,6 +123,7 @@ void HobbitClient::stop() {
 
 void HobbitClient::readMessage() {
 
+	// Read all Text Messages
 	BaseMessage textMessageOpt = client.frontTextMessage();
 	if (textMessageOpt.message.size() > 0) {
 		// Assuming textMessageOpt.message is a queue of characters or strings
@@ -119,13 +137,15 @@ void HobbitClient::readMessage() {
 
 		client.popFrontTextMessage();
 	}
-
-	BaseMessage eventMessageOpt = client.frontEventMessage();
-	if (eventMessageOpt.message.size() > 0) {
-		readGameMessage(eventMessageOpt.senderID, eventMessageOpt.message);
-		client.popFrontEventMessage();
+	// Read all Event Messages
+	while (client.eventMessagesSize() > 0) {
+		BaseMessage eventMessageOpt = client.frontEventMessage();
+		if (eventMessageOpt.message.size() > 0) {
+			readGameMessage(eventMessageOpt.senderID, eventMessageOpt.message);
+			client.popFrontEventMessage();
+		}
 	}
-
+	// Read all Snap Messages
 	std::map<uint8_t, BaseMessage> snapshotMessages = client.snapMessage();
 	for (auto& pair : snapshotMessages) {
 		readGameMessage(pair.first, pair.second.message);
@@ -137,12 +157,12 @@ void HobbitClient::writeMessage() {
 
 	std::vector<BaseMessage> messages;
 
+	// write messages from mainplayer
 	std::vector<BaseMessage> mainPlayerMsg = mainPlayer.write();
-	std::vector<BaseMessage> connectedPlayerMsg = mainPlayer.write();
 
 	messages.insert(messages.end(), mainPlayerMsg.begin(), mainPlayerMsg.end());
-	messages.insert(messages.end(), connectedPlayerMsg.begin(), connectedPlayerMsg.end());
 
+	//send message
 	for (BaseMessage& e : messages)
 	{
 		e.senderID = client.getClientID();
@@ -158,8 +178,31 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
 		DataLabel label = static_cast<DataLabel>(gameData.front());
 		gameData.pop();
 
+		if (gameData.empty()) {
+			logOption_->LogMessage(LogLevel::Log_Error, "Incomplete message: missing size after label", static_cast<int>(label));
+			break;
+		}
+
 		uint8_t size_tmp = gameData.front();
 		gameData.pop();
+
+		// Check if label processing is enabled
+		bool processLabel = true;
+		auto it = messageLabelStates.find(label);
+		if (it != messageLabelStates.end()) {
+			processLabel = it->second;
+		}
+
+		if (!processLabel) {
+			// Skip the data bytes
+			for (int i = 0; i < size_tmp; ++i) {
+				if (gameData.empty()) break;
+				gameData.pop();
+			}
+			logOption_->LogMessage(LogLevel::Log_Debug, "Skipped disabled label", static_cast<int>(label));
+			continue;
+		}
+
 
 		if (label == DataLabel::CONNECTED_PLAYER_SNAP)
 		{
@@ -176,15 +219,11 @@ void HobbitClient::readGameMessage(int senderID, std::queue<uint8_t>& gameData) 
 		}
 		else if (label == DataLabel::ENEMIES_HEALTH)
 		{
-			auto it = std::find_if(std::begin(connectedPlayers), std::end(connectedPlayers),
-				[&](const ConnectedPlayer& p) { return p.id == senderID; });
-			if (it != std::end(connectedPlayers)) {
-				it->readProcessEnemiesHealth(gameData);
-			}
-			else {
-				logOption_->LogMessage(LogLevel::Log_Error, "Unregistered player id", senderID);
-				connectedPlayers[0].readProcessEnemiesHealth(gameData);
-			}
+			mainPlayer.readProcessEnemiesHealth(gameData);
+		}
+		else if (label == DataLabel::CONNECTED_PLAYER_LEVEL)
+		{
+			mainPlayer.readConectedPlayerLevel(gameData);
 		}
 		else if (label == DataLabel::INVENTORY)
 		{
@@ -239,6 +278,8 @@ void HobbitClient::onClientListUpdate(const std::queue<uint8_t>& clientIDs) {
 			connectedClients.pop();
 		}
 	}
+
+	//[missing] share the information of all, inventory
 }
 std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
 	std::ifstream file;

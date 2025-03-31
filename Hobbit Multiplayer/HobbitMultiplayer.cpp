@@ -113,4 +113,10 @@ void HobbitMultiplayer::startServerClient()
 	logOption_->LogMessage(LogLevel::Log_Info, "Server Stoped");
 }
 
+std::map<DataLabel, bool> HobbitMultiplayer::getMessageLabelStates() const {
+	return hobbitClient.getMessageLabelStates();
+}
 
+void HobbitMultiplayer::setMessageLabelProcessing(DataLabel label, bool enable) {
+	hobbitClient.setMessageLabelProcessing(label, enable);
+}

@@ -4,42 +4,50 @@
 #include "framework.h"
 #include "HobbitMultiplayerWindowed.h"
 #include "../Hobbit Multiplayer/HobbitMultiplayer.h"
+#include <shellapi.h>
 
 #define MAX_LOADSTRING 100
 
-// Control IDs for first UI
-#define IDC_CREATE_SERVER    101
-#define IDC_JOIN_SERVER_LABEL 102
-#define IDC_JOIN_SERVER_EDIT 103
-#define IDC_JOIN_SERVER_BTN  104
-
-// Control ID for second UI
-#define IDC_EXIT_SERVER      201
+// Control IDs
+#define IDC_CREATE_SERVER        1001
+#define IDC_JOIN_SERVER_LABEL    1002
+#define IDC_JOIN_SERVER_EDIT     1003
+#define IDC_JOIN_SERVER_BTN      1004
+#define IDC_EXIT_SERVER          1005
+#define IDC_SIDEBAR_PANEL        300
+#define IDC_MAIN_PANEL           301
+#define IDC_TOGGLE_1             310
+#define IDC_TOGGLE_6             315
 
 // Global Variables:
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+HINSTANCE hInst;
+WCHAR szTitle[MAX_LOADSTRING];
+WCHAR szWindowClass[MAX_LOADSTRING];
 
-// Global handles for our UI controls
-// First UI controls
+// UI Controls
 HWND hCreateServerBtn = nullptr;
 HWND hJoinServerLabel = nullptr;
 HWND hJoinServerEdit = nullptr;
 HWND hJoinServerBtn = nullptr;
-
-// Second UI control
 HWND hExitServerBtn = nullptr;
+HWND hSidebarPanel = nullptr;
+HWND hMainPanel = nullptr;
 
-// Enum for our UI state
+// State management
 enum UIState { UI_FIRST, UI_SECOND };
 UIState currentUI = UI_FIRST;
+bool toggleStates[6] = { false };
 
-// Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+HobbitMultiplayer hobbitMultiplayer;
+std::thread serverThread;
+
+// Forward declarations
+ATOM MyRegisterClass(HINSTANCE hInstance);
+BOOL InitInstance(HINSTANCE, int);
+LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
+void CreateSidebar(HWND hWnd);
+void CreateMainUI(HWND hParent);
+void SwitchUI(UIState newState, HWND hParent);
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
@@ -49,22 +57,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // Initialize global strings
     LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
     LoadStringW(hInstance, IDC_HOBBITMULTIPLAYERWINDOWED, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-    // Perform application initialization:
     if (!InitInstance(hInstance, nCmdShow))
     {
         return FALSE;
     }
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_HOBBITMULTIPLAYERWINDOWED));
-
     MSG msg;
 
-    // Main message loop:
     while (GetMessage(&msg, nullptr, 0, 0))
     {
         if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
@@ -77,23 +81,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
-
-HobbitMultiplayer hobbitMultiplayer;
-
-
-
-std::thread serverThread;
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
 ATOM MyRegisterClass(HINSTANCE hInstance)
 {
     WNDCLASSEXW wcex;
-
     wcex.cbSize = sizeof(WNDCLASSEX);
 
     wcex.style = CS_HREDRAW | CS_VREDRAW;
@@ -111,181 +101,92 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
-    hInst = hInstance; // Store instance handle in our global variable
-
+    hInst = hInstance;
     HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, 0, 600, 400, nullptr, nullptr, hInstance, nullptr);
+        CW_USEDEFAULT, 0, 800, 600, nullptr, nullptr, hInstance, nullptr);
 
-    if (!hWnd)
-    {
-        return FALSE;
-    }
+    if (!hWnd) return FALSE;
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
-
     return TRUE;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
     case WM_CREATE:
     {
-        // --- First UI: Create Server and Join Server ---
-        // Create Server button
-        hCreateServerBtn = CreateWindowW(L"BUTTON", L"Create Server",
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-            50, 50, 150, 30, hWnd, (HMENU)IDC_CREATE_SERVER, hInst, nullptr);
-
-        // Join Server label
-        hJoinServerLabel = CreateWindowW(L"STATIC", L"Join Server:",
-            WS_CHILD | WS_VISIBLE,
-            50, 100, 100, 20, hWnd, (HMENU)IDC_JOIN_SERVER_LABEL, hInst, nullptr);
-
-        // Join Server edit control
-        hJoinServerEdit = CreateWindowW(L"EDIT", L"",
-            WS_CHILD | WS_VISIBLE | WS_BORDER,
-            160, 95, 200, 25, hWnd, (HMENU)IDC_JOIN_SERVER_EDIT, hInst, nullptr);
-
-        // Join Server button
-        hJoinServerBtn = CreateWindowW(L"BUTTON", L"Join Server",
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-            380, 95, 120, 30, hWnd, (HMENU)IDC_JOIN_SERVER_BTN, hInst, nullptr);
-
-        // --- Second UI: Exit Server ---
-        // Create Exit Server button, but initially hidden.
-        hExitServerBtn = CreateWindowW(L"BUTTON", L"Exit Server",
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-            50, 50, 150, 30, hWnd, (HMENU)IDC_EXIT_SERVER, hInst, nullptr);
-        ShowWindow(hExitServerBtn, SW_HIDE);
+        CreateSidebar(hWnd);
+        CreateMainUI(hMainPanel);
+        break;
     }
-    break;
+
+    case WM_SIZE:
+    {
+        RECT rc;
+        GetClientRect(hWnd, &rc);
+        int sidebarWidth = (int)(rc.right * 0.2);
+        MoveWindow(hSidebarPanel, 0, 0, sidebarWidth, rc.bottom, TRUE);
+        MoveWindow(hMainPanel, sidebarWidth, 0, rc.right - sidebarWidth, rc.bottom, TRUE);
+        break;
+    }
 
     case WM_COMMAND:
     {
         int wmId = LOWORD(wParam);
-        // --- First UI Button Handlers ---
+
+        // Handle sidebar toggles
+        if (wmId >= IDC_TOGGLE_1 && wmId <= IDC_TOGGLE_6)
+        {
+            int idx = wmId - IDC_TOGGLE_1;
+            toggleStates[idx] = !toggleStates[idx];
+            CheckDlgButton(hSidebarPanel, wmId, toggleStates[idx] ? BST_CHECKED : BST_UNCHECKED);
+            break;
+        }
+
+        // Handle main UI
         if (currentUI == UI_FIRST)
         {
             if (wmId == IDC_CREATE_SERVER)
             {
-
-                // Start the server in a new thread
-                serverThread = std::thread([&]() {
-                    hobbitMultiplayer.startServerClient();
-                    });
-
-                // Proceed to switch UI.
-                currentUI = UI_SECOND;
-                // Hide first UI controls.
-                ShowWindow(hCreateServerBtn, SW_HIDE);
-                ShowWindow(hJoinServerLabel, SW_HIDE);
-                ShowWindow(hJoinServerEdit, SW_HIDE);
-                ShowWindow(hJoinServerBtn, SW_HIDE);
-
-                // Show second UI control.
-                ShowWindow(hExitServerBtn, SW_SHOW);
+                serverThread = std::thread([&]() { hobbitMultiplayer.startServerClient(); });
+                SwitchUI(UI_SECOND, hMainPanel);
             }
             else if (wmId == IDC_JOIN_SERVER_BTN)
             {
-                // Retrieve input from the join server edit control.
                 wchar_t buffer[256] = { 0 };
                 GetWindowTextW(hJoinServerEdit, buffer, 256);
-                std::wstring wstr(buffer);
+                std::string str(buffer, buffer + wcslen(buffer));
 
-                // Convert std::wstring to std::string
-                std::string str(wstr.begin(), wstr.end());
-
-                // Start the server in a new thread
-                serverThread = std::thread([&]() {
-                    hobbitMultiplayer.startClient(str);
-                    });
-
-                // Simple validation: ensure the input is not empty.
-                if (false)
-                {
-                    MessageBoxW(hWnd, L"Please enter a server name to join.", L"Validation Error", MB_OK | MB_ICONERROR);
-                }
-                else
-                {
-
-                    // Input appears valid, proceed to switch UI.
-                    currentUI = UI_SECOND;
-
-                    // Hide first UI controls.
-                    ShowWindow(hCreateServerBtn, SW_HIDE);
-                    ShowWindow(hJoinServerLabel, SW_HIDE);
-                    ShowWindow(hJoinServerEdit, SW_HIDE);
-                    ShowWindow(hJoinServerBtn, SW_HIDE);
-
-                    // Show second UI control.
-                    ShowWindow(hExitServerBtn, SW_SHOW);
-                }
+                serverThread = std::thread([&]() { hobbitMultiplayer.startClient(str); });
+                SwitchUI(UI_SECOND, hMainPanel);
             }
         }
-        // --- Second UI Button Handler ---
-        else if (currentUI == UI_SECOND)
+        else if (currentUI == UI_SECOND && wmId == IDC_EXIT_SERVER)
         {
-            if (wmId == IDC_EXIT_SERVER)
-            {
-                hobbitMultiplayer.stopServer(); // Implement this method as needed
-                hobbitMultiplayer.stopClient(); // Implement this method as needed
+            hobbitMultiplayer.stopServer();
+            hobbitMultiplayer.stopClient();
 
-                // Wait for the server thread to finish
-                if (serverThread.joinable())
-                {
-                    serverThread.join();
-                }
-
-
-                // Return to the first UI.
-                currentUI = UI_FIRST;
-
-                // Hide second UI control.
-                ShowWindow(hExitServerBtn, SW_HIDE);
-
-                // Reset first UI controls (if needed, you might also clear the edit box).
-                ShowWindow(hCreateServerBtn, SW_SHOW);
-                ShowWindow(hJoinServerLabel, SW_SHOW);
-                ShowWindow(hJoinServerEdit, SW_SHOW);
-                ShowWindow(hJoinServerBtn, SW_SHOW);
-            }
+            if (serverThread.joinable()) serverThread.join();
+            SwitchUI(UI_FIRST, hMainPanel);
         }
-        // Handle standard menu commands.
+
+        // Handle menu items
         switch (wmId)
         {
         case IDM_ABOUT:
-            DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
+            ShellExecuteW(nullptr, L"open", L"https://www.youtube.com", nullptr, nullptr, SW_SHOWNORMAL);
             break;
         case IDM_EXIT:
             DestroyWindow(hWnd);
             break;
         }
+        break;
     }
-    break;
-
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hWnd, &ps);
-        // Additional drawing logic can be added here if needed.
-        EndPaint(hWnd, &ps);
-    }
-    break;
 
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -297,22 +198,72 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+void CreateSidebar(HWND hWnd)
 {
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
+    // Create sidebar panel
+    hSidebarPanel = CreateWindowW(L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE | WS_BORDER,
+        0, 0, 150, 600, hWnd, (HMENU)IDC_SIDEBAR_PANEL, hInst, nullptr);
 
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
+    // Create main content panel
+    hMainPanel = CreateWindowW(L"STATIC", L"",
+        WS_CHILD | WS_VISIBLE,
+        150, 0, 650, 600, hWnd, (HMENU)IDC_MAIN_PANEL, hInst, nullptr);
+
+    // Create toggle buttons in sidebar
+    const wchar_t* labels[] = {
+        L"Player Health", L"Inventory", L"Chat",
+        L"Map", L"Quests", L"Settings"
+    };
+
+    for (int i = 0; i < 6; i++)
+    {
+        CreateWindowW(L"BUTTON", labels[i],
+            WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+            10, 20 + (35 * i), 130, 30,
+            hSidebarPanel, (HMENU)(IDC_TOGGLE_1 + i), hInst, nullptr);
     }
-    return (INT_PTR)FALSE;
+}
+
+void CreateMainUI(HWND hParent)
+{
+    // First UI elements
+    hCreateServerBtn = CreateWindowW(L"BUTTON", L"Create Server",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        50, 50, 150, 30, hParent, (HMENU)IDC_CREATE_SERVER, hInst, nullptr);
+
+    hJoinServerLabel = CreateWindowW(L"STATIC", L"Join Server:",
+        WS_CHILD | WS_VISIBLE,
+        50, 100, 100, 20, hParent, (HMENU)IDC_JOIN_SERVER_LABEL, hInst, nullptr);
+
+    hJoinServerEdit = CreateWindowW(L"EDIT", L"",
+        WS_CHILD | WS_VISIBLE | WS_BORDER,
+        160, 95, 200, 25, hParent, (HMENU)IDC_JOIN_SERVER_EDIT, hInst, nullptr);
+
+    hJoinServerBtn = CreateWindowW(L"BUTTON", L"Join Server",
+        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+        380, 95, 120, 30, hParent, (HMENU)IDC_JOIN_SERVER_BTN, hInst, nullptr);
+
+    // Second UI element
+    hExitServerBtn = CreateWindowW(L"BUTTON", L"Exit Server",
+        WS_CHILD | BS_PUSHBUTTON,
+        50, 50, 150, 30, hParent, (HMENU)IDC_EXIT_SERVER, hInst, nullptr);
+    ShowWindow(hExitServerBtn, SW_HIDE);
+}
+
+void SwitchUI(UIState newState, HWND hParent)
+{
+    currentUI = newState;
+    int showFirst = (newState == UI_FIRST) ? SW_SHOW : SW_HIDE;
+    int showSecond = (newState == UI_SECOND) ? SW_SHOW : SW_HIDE;
+
+    ShowWindow(hCreateServerBtn, showFirst);
+    ShowWindow(hJoinServerLabel, showFirst);
+    ShowWindow(hJoinServerEdit, showFirst);
+    ShowWindow(hJoinServerBtn, showFirst);
+    ShowWindow(hExitServerBtn, showSecond);
+
+    // Force redraw
+    InvalidateRect(hParent, nullptr, TRUE);
+    UpdateWindow(hParent);
 }

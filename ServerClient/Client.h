@@ -56,6 +56,7 @@ public:
 
     void popFrontTextMessage() { textMessages.pop_front(); }
     void popFrontEventMessage() { eventMessages.pop_front(); }
+	uint32_t eventMessagesSize() { return eventMessages.size(); }
     void clearSnapMessage() { snapshotMessages.clear(); }
 
     uint8_t getClientID() { return clientID; }
