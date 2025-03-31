@@ -5,55 +5,65 @@
 #include "HobbitMultiplayerWindowed.h"
 #include "../Hobbit Multiplayer/HobbitMultiplayer.h"
 #include <shellapi.h>
+#include <map>
 
 #define MAX_LOADSTRING 100
 
-// Control IDs
-#define IDC_CREATE_SERVER        1001
-#define IDC_JOIN_SERVER_LABEL    1002
-#define IDC_JOIN_SERVER_EDIT     1003
-#define IDC_JOIN_SERVER_BTN      1004
-#define IDC_EXIT_SERVER          1005
-#define IDC_SIDEBAR_PANEL        300
-#define IDC_MAIN_PANEL           301
-#define IDC_TOGGLE_1             310
-#define IDC_TOGGLE_6             315
+// Control IDs for first UI
+#define IDC_CREATE_SERVER            1001
+#define IDC_JOIN_SERVER_LABEL        1002
+#define IDC_JOIN_SERVER_EDIT         1003
+#define IDC_JOIN_SERVER_BTN          1004
 
-// Global Variables:
+// Control ID for second UI
+#define IDC_EXIT_SERVER              1005
+
+// Checkbox IDs for sync toggles
+#define IDC_CHECKBOX_PLAYER_SNAP     2001
+#define IDC_CHECKBOX_ENEMY_HEALTH    2002
+#define IDC_CHECKBOX_PLAYER_LEVEL    2003
+#define IDC_CHECKBOX_INVENTORY       2004
+
+// Global Variables
 HINSTANCE hInst;
 WCHAR szTitle[MAX_LOADSTRING];
 WCHAR szWindowClass[MAX_LOADSTRING];
 
-// UI Controls
+// UI Control Handles
 HWND hCreateServerBtn = nullptr;
 HWND hJoinServerLabel = nullptr;
 HWND hJoinServerEdit = nullptr;
 HWND hJoinServerBtn = nullptr;
 HWND hExitServerBtn = nullptr;
-HWND hSidebarPanel = nullptr;
-HWND hMainPanel = nullptr;
 
-// State management
+// Sync Toggle Handles (Sidebar)
+HWND hCheckPlayerSnap = nullptr;
+HWND hCheckEnemyHealth = nullptr;
+HWND hCheckPlayerLevel = nullptr;
+HWND hCheckInventory = nullptr;
+
+// UI State
 enum UIState { UI_FIRST, UI_SECOND };
 UIState currentUI = UI_FIRST;
-bool toggleStates[6] = { false };
 
+// Multiplayer Manager
 HobbitMultiplayer hobbitMultiplayer;
 std::thread serverThread;
 
-// Forward declarations
+// Forward Declarations
 ATOM MyRegisterClass(HINSTANCE hInstance);
 BOOL InitInstance(HINSTANCE, int);
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
-void CreateSidebar(HWND hWnd);
-void CreateMainUI(HWND hParent);
-void SwitchUI(UIState newState, HWND hParent);
+void UpdateSyncCheckboxes(HWND hWnd);
+void ToggleSyncLabel(DataLabel label, bool enable);
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+// Entry Point
+int APIENTRY wWinMain(
+    _In_ HINSTANCE hInstance,
     _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR    lpCmdLine,
-    _In_ int       nCmdShow)
-{
+    _In_ LPWSTR lpCmdLine,
+    _In_ int nCmdShow
+) {
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
 
@@ -61,18 +71,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     LoadStringW(hInstance, IDC_HOBBITMULTIPLAYERWINDOWED, szWindowClass, MAX_LOADSTRING);
     MyRegisterClass(hInstance);
 
-    if (!InitInstance(hInstance, nCmdShow))
-    {
+    if (!InitInstance(hInstance, nCmdShow)) {
         return FALSE;
     }
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_HOBBITMULTIPLAYERWINDOWED));
     MSG msg;
 
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
+    while (GetMessage(&msg, nullptr, 0, 0)) {
+        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg)) {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
@@ -81,15 +88,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
-ATOM MyRegisterClass(HINSTANCE hInstance)
-{
-    WNDCLASSEXW wcex;
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
+// Window Class Registration
+ATOM MyRegisterClass(HINSTANCE hInstance) {
+    WNDCLASSEXW wcex = { sizeof(WNDCLASSEX) };
     wcex.style = CS_HREDRAW | CS_VREDRAW;
     wcex.lpfnWndProc = WndProc;
-    wcex.cbClsExtra = 0;
-    wcex.cbWndExtra = 0;
     wcex.hInstance = hInstance;
     wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_HOBBITMULTIPLAYERWINDOWED));
     wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
@@ -101,83 +104,201 @@ ATOM MyRegisterClass(HINSTANCE hInstance)
     return RegisterClassExW(&wcex);
 }
 
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
+// Initialize Main Window
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow) {
     hInst = hInstance;
-    HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, 0, 800, 600, nullptr, nullptr, hInstance, nullptr);
+    HWND hWnd = CreateWindowW(
+        szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, 0, 600, 400, nullptr, nullptr, hInstance, nullptr
+    );
 
-    if (!hWnd) return FALSE;
+    if (!hWnd) {
+        return FALSE;
+    }
 
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
     return TRUE;
 }
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
+// Update Sync Checkbox States
+void UpdateSyncCheckboxes(HWND hWnd) {
+    auto labelStates = hobbitMultiplayer.getMessageLabelStates();
+
+    SendMessage(hCheckPlayerSnap, BM_SETCHECK,
+        labelStates[DataLabel::CONNECTED_PLAYER_SNAP] ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessage(hCheckEnemyHealth, BM_SETCHECK,
+        labelStates[DataLabel::ENEMIES_HEALTH] ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessage(hCheckPlayerLevel, BM_SETCHECK,
+        labelStates[DataLabel::CONNECTED_PLAYER_LEVEL] ? BST_CHECKED : BST_UNCHECKED, 0);
+    SendMessage(hCheckInventory, BM_SETCHECK,
+        labelStates[DataLabel::INVENTORY] ? BST_CHECKED : BST_UNCHECKED, 0);
+}
+
+// Toggle Sync Label
+void ToggleSyncLabel(DataLabel label, bool enable) {
+    hobbitMultiplayer.setMessageLabelProcessing(label, enable);
+}
+
+// Main Window Procedure
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) {
+    switch (message) {
     case WM_CREATE:
     {
-        CreateSidebar(hWnd);
-        CreateMainUI(hMainPanel);
-        break;
-    }
+        // Main UI Controls
+        hCreateServerBtn = CreateWindowW(
+            L"BUTTON", L"Create Server",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            50, 50, 150, 30, hWnd,
+            (HMENU)IDC_CREATE_SERVER, hInst, nullptr
+        );
 
-    case WM_SIZE:
-    {
-        RECT rc;
-        GetClientRect(hWnd, &rc);
-        int sidebarWidth = (int)(rc.right * 0.2);
-        MoveWindow(hSidebarPanel, 0, 0, sidebarWidth, rc.bottom, TRUE);
-        MoveWindow(hMainPanel, sidebarWidth, 0, rc.right - sidebarWidth, rc.bottom, TRUE);
+        hJoinServerLabel = CreateWindowW(
+            L"STATIC", L"Join Server:",
+            WS_CHILD | WS_VISIBLE,
+            50, 100, 100, 20, hWnd,
+            (HMENU)IDC_JOIN_SERVER_LABEL, hInst, nullptr
+        );
+
+        hJoinServerEdit = CreateWindowW(
+            L"EDIT", L"",
+            WS_CHILD | WS_VISIBLE | WS_BORDER,
+            160, 95, 200, 25, hWnd,
+            (HMENU)IDC_JOIN_SERVER_EDIT, hInst, nullptr
+        );
+
+        hJoinServerBtn = CreateWindowW(
+            L"BUTTON", L"Join Server",
+            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+            380, 95, 120, 30, hWnd,
+            (HMENU)IDC_JOIN_SERVER_BTN, hInst, nullptr
+        );
+
+        hExitServerBtn = CreateWindowW(
+            L"BUTTON", L"Exit Server",
+            WS_CHILD | BS_PUSHBUTTON,
+            50, 50, 150, 30, hWnd,
+            (HMENU)IDC_EXIT_SERVER, hInst, nullptr
+        );
+        ShowWindow(hExitServerBtn, SW_HIDE);
+
+        // Sync Toggle Checkboxes (Sidebar)
+        hCheckPlayerSnap = CreateWindowW(
+            L"BUTTON", L"Player Snap Sync",
+            WS_CHILD | BS_AUTOCHECKBOX,
+            320, 50, 200, 20, hWnd,
+            (HMENU)IDC_CHECKBOX_PLAYER_SNAP, hInst, nullptr
+        );
+        ShowWindow(hCheckPlayerSnap, SW_HIDE);
+
+        hCheckEnemyHealth = CreateWindowW(
+            L"BUTTON", L"Enemy Health Sync",
+            WS_CHILD | BS_AUTOCHECKBOX,
+            320, 80, 200, 20, hWnd,
+            (HMENU)IDC_CHECKBOX_ENEMY_HEALTH, hInst, nullptr
+        );
+        ShowWindow(hCheckEnemyHealth, SW_HIDE);
+
+        hCheckPlayerLevel = CreateWindowW(
+            L"BUTTON", L"Player Level Sync",
+            WS_CHILD | BS_AUTOCHECKBOX,
+            320, 110, 200, 20, hWnd,
+            (HMENU)IDC_CHECKBOX_PLAYER_LEVEL, hInst, nullptr
+        );
+        ShowWindow(hCheckPlayerLevel, SW_HIDE);
+
+        hCheckInventory = CreateWindowW(
+            L"BUTTON", L"Inventory Sync",
+            WS_CHILD | BS_AUTOCHECKBOX,
+            320, 140, 200, 20, hWnd,
+            (HMENU)IDC_CHECKBOX_INVENTORY, hInst, nullptr
+        );
+        ShowWindow(hCheckInventory, SW_HIDE);
         break;
     }
 
     case WM_COMMAND:
     {
         int wmId = LOWORD(wParam);
+        int wmEvent = HIWORD(wParam);
 
-        // Handle sidebar toggles
-        if (wmId >= IDC_TOGGLE_1 && wmId <= IDC_TOGGLE_6)
-        {
-            int idx = wmId - IDC_TOGGLE_1;
-            toggleStates[idx] = !toggleStates[idx];
-            CheckDlgButton(hSidebarPanel, wmId, toggleStates[idx] ? BST_CHECKED : BST_UNCHECKED);
-            break;
+        // Handle Checkbox Toggles
+        if (wmEvent == BN_CLICKED) {
+            switch (wmId) {
+            case IDC_CHECKBOX_PLAYER_SNAP:
+                ToggleSyncLabel(DataLabel::CONNECTED_PLAYER_SNAP,
+                    SendMessage(hCheckPlayerSnap, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                break;
+            case IDC_CHECKBOX_ENEMY_HEALTH:
+                ToggleSyncLabel(DataLabel::ENEMIES_HEALTH,
+                    SendMessage(hCheckEnemyHealth, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                break;
+            case IDC_CHECKBOX_PLAYER_LEVEL:
+                ToggleSyncLabel(DataLabel::CONNECTED_PLAYER_LEVEL,
+                    SendMessage(hCheckPlayerLevel, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                break;
+            case IDC_CHECKBOX_INVENTORY:
+                ToggleSyncLabel(DataLabel::INVENTORY,
+                    SendMessage(hCheckInventory, BM_GETCHECK, 0, 0) == BST_CHECKED);
+                break;
+            }
         }
 
-        // Handle main UI
-        if (currentUI == UI_FIRST)
-        {
-            if (wmId == IDC_CREATE_SERVER)
-            {
+        // Main UI Logic
+        if (currentUI == UI_FIRST) {
+            if (wmId == IDC_CREATE_SERVER) {
                 serverThread = std::thread([&]() { hobbitMultiplayer.startServerClient(); });
-                SwitchUI(UI_SECOND, hMainPanel);
+                currentUI = UI_SECOND;
+                ShowWindow(hCreateServerBtn, SW_HIDE);
+                ShowWindow(hJoinServerLabel, SW_HIDE);
+                ShowWindow(hJoinServerEdit, SW_HIDE);
+                ShowWindow(hJoinServerBtn, SW_HIDE);
+                ShowWindow(hExitServerBtn, SW_SHOW);
+                ShowWindow(hCheckPlayerSnap, SW_SHOW);
+                ShowWindow(hCheckEnemyHealth, SW_SHOW);
+                ShowWindow(hCheckPlayerLevel, SW_SHOW);
+                ShowWindow(hCheckInventory, SW_SHOW);
+                UpdateSyncCheckboxes(hWnd);
             }
-            else if (wmId == IDC_JOIN_SERVER_BTN)
-            {
+            else if (wmId == IDC_JOIN_SERVER_BTN) {
                 wchar_t buffer[256] = { 0 };
                 GetWindowTextW(hJoinServerEdit, buffer, 256);
-                std::string str(buffer, buffer + wcslen(buffer));
+                std::string serverAddress(buffer, buffer + wcslen(buffer));
 
-                serverThread = std::thread([&]() { hobbitMultiplayer.startClient(str); });
-                SwitchUI(UI_SECOND, hMainPanel);
+                serverThread = std::thread([&]() { hobbitMultiplayer.startClient(serverAddress); });
+                currentUI = UI_SECOND;
+                ShowWindow(hCreateServerBtn, SW_HIDE);
+                ShowWindow(hJoinServerLabel, SW_HIDE);
+                ShowWindow(hJoinServerEdit, SW_HIDE);
+                ShowWindow(hJoinServerBtn, SW_HIDE);
+                ShowWindow(hExitServerBtn, SW_SHOW);
+                ShowWindow(hCheckPlayerSnap, SW_SHOW);
+                ShowWindow(hCheckEnemyHealth, SW_SHOW);
+                ShowWindow(hCheckPlayerLevel, SW_SHOW);
+                ShowWindow(hCheckInventory, SW_SHOW);
+                UpdateSyncCheckboxes(hWnd);
             }
         }
-        else if (currentUI == UI_SECOND && wmId == IDC_EXIT_SERVER)
-        {
-            hobbitMultiplayer.stopServer();
-            hobbitMultiplayer.stopClient();
-
-            if (serverThread.joinable()) serverThread.join();
-            SwitchUI(UI_FIRST, hMainPanel);
+        else if (currentUI == UI_SECOND) {
+            if (wmId == IDC_EXIT_SERVER) {
+                hobbitMultiplayer.stopServer();
+                hobbitMultiplayer.stopClient();
+                if (serverThread.joinable()) serverThread.join();
+                currentUI = UI_FIRST;
+                ShowWindow(hExitServerBtn, SW_HIDE);
+                ShowWindow(hCreateServerBtn, SW_SHOW);
+                ShowWindow(hJoinServerLabel, SW_SHOW);
+                ShowWindow(hJoinServerEdit, SW_SHOW);
+                ShowWindow(hJoinServerBtn, SW_SHOW);
+                ShowWindow(hCheckPlayerSnap, SW_HIDE);
+                ShowWindow(hCheckEnemyHealth, SW_HIDE);
+                ShowWindow(hCheckPlayerLevel, SW_HIDE);
+                ShowWindow(hCheckInventory, SW_HIDE);
+            }
         }
 
-        // Handle menu items
-        switch (wmId)
-        {
+        // Menu Commands
+        switch (wmId) {
         case IDM_ABOUT:
             ShellExecuteW(nullptr, L"open", L"https://www.youtube.com", nullptr, nullptr, SW_SHOWNORMAL);
             break;
@@ -185,6 +306,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             DestroyWindow(hWnd);
             break;
         }
+        break;
+    }
+
+    case WM_PAINT:
+    {
+        PAINTSTRUCT ps;
+        HDC hdc = BeginPaint(hWnd, &ps);
+        EndPaint(hWnd, &ps);
         break;
     }
 
@@ -196,74 +325,4 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
-}
-
-void CreateSidebar(HWND hWnd)
-{
-    // Create sidebar panel
-    hSidebarPanel = CreateWindowW(L"STATIC", L"",
-        WS_CHILD | WS_VISIBLE | WS_BORDER,
-        0, 0, 150, 600, hWnd, (HMENU)IDC_SIDEBAR_PANEL, hInst, nullptr);
-
-    // Create main content panel
-    hMainPanel = CreateWindowW(L"STATIC", L"",
-        WS_CHILD | WS_VISIBLE,
-        150, 0, 650, 600, hWnd, (HMENU)IDC_MAIN_PANEL, hInst, nullptr);
-
-    // Create toggle buttons in sidebar
-    const wchar_t* labels[] = {
-        L"Player Health", L"Inventory", L"Chat",
-        L"Map", L"Quests", L"Settings"
-    };
-
-    for (int i = 0; i < 6; i++)
-    {
-        CreateWindowW(L"BUTTON", labels[i],
-            WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
-            10, 20 + (35 * i), 130, 30,
-            hSidebarPanel, (HMENU)(IDC_TOGGLE_1 + i), hInst, nullptr);
-    }
-}
-
-void CreateMainUI(HWND hParent)
-{
-    // First UI elements
-    hCreateServerBtn = CreateWindowW(L"BUTTON", L"Create Server",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        50, 50, 150, 30, hParent, (HMENU)IDC_CREATE_SERVER, hInst, nullptr);
-
-    hJoinServerLabel = CreateWindowW(L"STATIC", L"Join Server:",
-        WS_CHILD | WS_VISIBLE,
-        50, 100, 100, 20, hParent, (HMENU)IDC_JOIN_SERVER_LABEL, hInst, nullptr);
-
-    hJoinServerEdit = CreateWindowW(L"EDIT", L"",
-        WS_CHILD | WS_VISIBLE | WS_BORDER,
-        160, 95, 200, 25, hParent, (HMENU)IDC_JOIN_SERVER_EDIT, hInst, nullptr);
-
-    hJoinServerBtn = CreateWindowW(L"BUTTON", L"Join Server",
-        WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-        380, 95, 120, 30, hParent, (HMENU)IDC_JOIN_SERVER_BTN, hInst, nullptr);
-
-    // Second UI element
-    hExitServerBtn = CreateWindowW(L"BUTTON", L"Exit Server",
-        WS_CHILD | BS_PUSHBUTTON,
-        50, 50, 150, 30, hParent, (HMENU)IDC_EXIT_SERVER, hInst, nullptr);
-    ShowWindow(hExitServerBtn, SW_HIDE);
-}
-
-void SwitchUI(UIState newState, HWND hParent)
-{
-    currentUI = newState;
-    int showFirst = (newState == UI_FIRST) ? SW_SHOW : SW_HIDE;
-    int showSecond = (newState == UI_SECOND) ? SW_SHOW : SW_HIDE;
-
-    ShowWindow(hCreateServerBtn, showFirst);
-    ShowWindow(hJoinServerLabel, showFirst);
-    ShowWindow(hJoinServerEdit, showFirst);
-    ShowWindow(hJoinServerBtn, showFirst);
-    ShowWindow(hExitServerBtn, showSecond);
-
-    // Force redraw
-    InvalidateRect(hParent, nullptr, TRUE);
-    UpdateWindow(hParent);
 }
