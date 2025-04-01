@@ -1,5 +1,5 @@
 #include "HobbitClient.h"
-
+namespace fs = std::filesystem; // Create an alias for convenience
 HobbitClient::HobbitClient(std::string initialServerIp)
 	: serverIp(std::move(initialServerIp)), running(false), processMessages(false),
 	logOption_(LogManager::Instance().CreateLogOption("HOBBIT CLIENT")) {
@@ -284,13 +284,18 @@ void HobbitClient::onClientListUpdate(const std::queue<uint8_t>& clientIDs) {
 std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
 	std::ifstream file;
 	std::string filePath = "FAKE_BILBO_GUID.txt";
-	bool foudFileInitially = true;;
+	bool foundFileInitially = true;
+
 	// Open the file, prompting the user if it doesn't exist
 	while (!file.is_open()) {
 		file.open(filePath);
 		if (!file.is_open()) {
-			foudFileInitially = false;
-			logOption_->LogMessage(LogLevel::Log_Prompt, "File not found. Enter the path to FAKE_BILBO_GUID.txt or 'q' to quit: ");
+			foundFileInitially = false;
+
+			// Get the full path
+			fs::path fullPath = fs::absolute(filePath);
+			logOption_->LogMessage(LogLevel::Log_Prompt, "File not found at path: " + fullPath.string() + ". Enter the path to FAKE_BILBO_GUID.txt or 'q' to quit: ");
+
 			std::string input;
 			std::getline(std::cin, input);
 			if (input == "q") return {}; // Quit if user enters 'q'
@@ -318,7 +323,7 @@ std::vector<uint64_t> HobbitClient::getPlayersNpcGuid() {
 			tempGUID.push_back(guid);
 		}
 	}
-	if (foudFileInitially)
+	if (foundFileInitially)
 		logOption_->LogMessage(LogLevel::Log_Info, "FOUND FILE!");
 	return tempGUID;
 }

@@ -47,7 +47,7 @@ class MainPlayer {
 
     const uint32_t X_POSITION_PTR = 0x0075BA3C;
 
-    std::vector<std::pair<uint32_t, float>> enemies; //NPC and previous Health
+    std::vector<std::pair<uint32_t, float>> enemies; //address and health
     std::vector<std::pair<uint8_t, float>> inventory;
 
     std::atomic<bool> processPackets;
@@ -101,6 +101,9 @@ public:
         {
             if (0x04004232 != hobbitProcessAnalyzer->readData<uint32_t>(e + 0x10))
                 continue;
+            if(0xABCABCABCABCABC0 == hobbitProcessAnalyzer->readData<uint32_t>(e + 0x8))
+                logOption_->LogMessage(LogLevel::Log_Error, "YOU ARE SETTING BILBO AS ENEMY NPC!!!");
+
             //hex
             logOption_->LogMessage(LogLevel::Log_Debug, "Address:", e, "Health: ", hobbitProcessAnalyzer->readData<float>(e + 0x290));
             enemies.push_back(std::make_pair(e, hobbitProcessAnalyzer->readData<float>(e + 0x290))); // address and health
@@ -146,38 +149,43 @@ public:
         logOption_->decreaseDepth();
     }
     void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
+
         uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
-
-
         for (int i = 0; i < numberHurtEnemies; ++i)
         {
             uint64_t guid = convertQueueToType<uint64_t>(gameData);
-            float health = convertQueueToType<float>(gameData);
-            std::pair enemyNewHealth = std::make_pair(guid, health);
+            float healthChange = convertQueueToType<float>(gameData);
 
+            std::pair enemyNewHealth = std::make_pair(guid, healthChange);
+
+			// validate GUID
             if (enemyNewHealth.first == 0)
                 continue;
 
+            //Log the Changes
             logOption_->LogMessage(LogLevel::Log_Debug, "Enemy Hurt");
             logOption_->increaseDepth();
-            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", enemyNewHealth.first, "New Health:", enemyNewHealth.second);
+            logOption_->LogMessage(LogLevel::Log_Debug, "GUID:", enemyNewHealth.first, "Dagame Deal:", enemyNewHealth.second);
             logOption_->decreaseDepth();
 
             //find by guid
             uint32_t objAddrs = hobbitProcessAnalyzer->findGameObjByGUID(enemyNewHealth.first);
 
-            //check if the object exist
+            //check if found object by address
             if (objAddrs != 0)
             {
+                // read current health of enemy
                 float health = hobbitProcessAnalyzer->readData<float>(objAddrs + 0x290);
-                for (auto& enemy : enemies)
+
+
+                for (auto& e : enemies)
                 {
-                    uint64_t a = hobbitProcessAnalyzer->readData<uint64_t>(enemy.first + 0x8);
+                    uint64_t guidEnemy = hobbitProcessAnalyzer->readData<uint64_t>(e.first + 0x8);
                     
-                    if (a == enemyNewHealth.first)
+                    if (guidEnemy == enemyNewHealth.first)
                     {
-						enemy.second = health + enemyNewHealth.second;
-                        hobbitProcessAnalyzer->writeData<float>(objAddrs + 0x290, enemyNewHealth.second);
+						e.second = health + enemyNewHealth.second;
+                        hobbitProcessAnalyzer->writeData<float>(e.first + 0x290, e.second);
                         break;
                     }
                 }
@@ -233,10 +241,17 @@ private:
     }
     BaseMessage writeEnemiesEvent()
     {
+
+        //sending the following message:
+        //label - Snap, 0 - reserve for size
+        //number of enemies
+        //GUID of enemy, health change
+
         if (!EVENT_EYSN)
             return BaseMessage(); // if not enabled return empty message
         BaseMessage msg(EVENT_MESSAGE, 0);
-        std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::ENEMIES_HEALTH), 0 };
+		std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::ENEMIES_HEALTH), 0 }; // label - Snap, 0 - reserve for size
+
 
         // amount of enemies send
         uint32_t enemisSend = 0;
@@ -244,25 +259,33 @@ private:
 
         dataVec[1] += sizeof(uint32_t);
 
-        for (int i = 0; i < enemies.size(); ++i)
+        for (auto& e : enemies)
         {
-
-            if (enemies[i].second != hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290))
+            // get current health of npc
+			float currentHealth = hobbitProcessAnalyzer->readData<float>(e.first + 0x290);
+            if (currentHealth < 0)
             {
-                logOption_->LogMessage(LogLevel::Log_Debug, "Write Enemy Address", enemies[i].first);
+                e.second = 0;
+                currentHealth = 0;
+            }
+            if (e.second != currentHealth)
+            {
+                //hex
+                logOption_->LogMessage(LogLevel::Log_Debug, "Write Enemy GUID", hobbitProcessAnalyzer->readData<uint64_t>(e.first + 0x8));
                 logOption_->increaseDepth();
-                logOption_->LogMessage(LogLevel::Log_Debug, "Heath: Before", enemies[i].second, "After", hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290));
+                logOption_->LogMessage(LogLevel::Log_Debug, "Heath: Before", e.second, "After", currentHealth);
                 logOption_->decreaseDepth();
-                
+
+ 
                 //GUID
-                pushTypeToVector(hobbitProcessAnalyzer->readData<uint64_t>(enemies[i].first + 0x8), dataVec);
+                pushTypeToVector(hobbitProcessAnalyzer->readData<uint64_t>(e.first + 0x8), dataVec);
                 dataVec[1] += sizeof(uint64_t);
 
                 //Heath change
-                pushTypeToVector(hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290) - enemies[i].second, dataVec);
+                pushTypeToVector(currentHealth - e.second, dataVec);
                 dataVec[1] += sizeof(float);
 
-                enemies[i].second = hobbitProcessAnalyzer->readData<float>(enemies[i].first + 0x290);
+                e.second = currentHealth;
                 ++enemisSend;
             }
         }
