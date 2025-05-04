@@ -29,6 +29,10 @@ public:
 	void stopClient();
 	void startServerClient();
 
+
+	std::map<DataLabel, bool> getMessageLabelStates() const;
+	void setMessageLabelProcessing(DataLabel label, bool enable);
+
 	LogOption::Ptr logOption_;
 	Server server;
 	HobbitClient hobbitClient;
