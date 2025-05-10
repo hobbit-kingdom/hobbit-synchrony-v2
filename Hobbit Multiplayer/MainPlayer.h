@@ -263,11 +263,11 @@ private:
         {
             // get current health of npc
 			float currentHealth = hobbitProcessAnalyzer->readData<float>(e.first + 0x290);
-            if (currentHealth < 0)
-            {
-                e.second = 0;
-                currentHealth = 0;
-            }
+            //if (currentHealth <= 0)
+           // {
+               // e.second = 0;
+              //  currentHealth = 0;
+            //}
             if (e.second != currentHealth)
             {
                 //hex
@@ -287,6 +287,7 @@ private:
 
                 e.second = currentHealth;
                 ++enemisSend;
+
             }
         }
         
