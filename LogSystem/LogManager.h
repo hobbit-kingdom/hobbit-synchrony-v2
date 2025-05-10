@@ -74,9 +74,11 @@ public:
 	void setDepth(int newDepth) { depth = (newDepth >= 0) ? newDepth : 0; }
 	void resetDapth() { depth = 0; }
 
-	void setColor() {
+	void setColor(std::string color) {
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-		SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+		if (color == "GREEN") SetConsoleTextAttribute(hConsole, FOREGROUND_GREEN | FOREGROUND_INTENSITY);
+		else if (color == "RED") SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_INTENSITY);
+		else if (color == "BLUE") SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 	}
 	void resetColor() {
 		HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);

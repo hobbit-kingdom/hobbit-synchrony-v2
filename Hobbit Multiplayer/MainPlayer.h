@@ -235,13 +235,12 @@ private:
 		for (const uint8_t& element : dataVec) {
 			snap.message.push(element);
 		}
-
-		logOption_->LogMessage(LogLevel::Log_Debug, "Sending Msg", "size", int(dataVec[1]), "Anim", animation, "Anim Frames", bilboAnimFrame, bilboLastAnimFrame, "Pos", position.x, position.y, position.z, "RotY", rotation.y, "Weapon", bilboWeapon);
+		logOption_->LogMessage(LogLevel::Log_Debug, "Sending Msg", "size", int(dataVec[1]), "Anim", animation, "Anim Frames", bilboAnimFrame, bilboLastAnimFrame, "Pos", position.x, position.y, position.z, "RotY", rotation.y, "Weapon", int(bilboWeapon));
 		return snap;
 	}
 	BaseMessage writeEnemiesEvent()
 	{
-		logOption_->setColor();
+		logOption_->setColor("GREEN");
 		//sending the following message:
 		//label - Snap, 0 - reserve for size
 		//number of enemies
@@ -311,6 +310,7 @@ private:
 	}
 	BaseMessage writeInventoryEvent()
 	{
+		logOption_->setColor("BLUE");
 		if (!EVENT_EYSN)
 			return BaseMessage(); // if not enabled return empty message
 
@@ -369,9 +369,11 @@ private:
 		if (inventorySend > 0)
 		{
 			logOption_->LogMessage(LogLevel::Log_Debug, "Sending: Items sent", int(inventorySend));
+			logOption_->resetColor();
 			return msg;
 		}
 		else
+			logOption_->resetColor();
 			return BaseMessage();
 	}
 	BaseMessage writeChangeLevelEvent()
