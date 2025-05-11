@@ -40,6 +40,8 @@ class MainPlayer {
 	uint32_t bilboPosXPTR;
 	uint32_t bilboAnimPTR;
 
+	uint8_t nowLevel;
+
 	float bilboAnimFrame;
 	float bilboLastAnimFrame;
 
@@ -213,6 +215,9 @@ private:
 		// label - Snap, 0 - reserve for size
 		std::vector<uint8_t> dataVec = { static_cast<uint8_t>(DataLabel::CONNECTED_PLAYER_SNAP), 0 };
 
+		pushTypeToVector(nowLevel, dataVec);
+		dataVec[1] += sizeof(nowLevel);
+
 		pushTypeToVector(animation, dataVec);
 		dataVec[1] += sizeof(animation);
 
@@ -374,7 +379,7 @@ private:
 		}
 		else
 			logOption_->resetColor();
-			return BaseMessage();
+		return BaseMessage();
 	}
 	BaseMessage writeChangeLevelEvent()
 	{
@@ -428,5 +433,7 @@ private:
 		bilboLastAnimFrame = hobbitProcessAnalyzer->readData<float>(0x0075BA3C + 0x53C);
 
 		bilboWeapon = hobbitProcessAnalyzer->readData<int8_t>(0x0075C738);
+
+		nowLevel = hobbitProcessAnalyzer->readData<uint8_t>(0x00762B5C);
 	}
 };

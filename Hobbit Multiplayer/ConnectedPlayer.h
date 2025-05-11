@@ -33,6 +33,8 @@ class ConnectedPlayer {
 	uint32_t levels;
 	int8_t weapon;
 
+	uint8_t hostLevel;
+
 
 	LogOption::Ptr logOption_;
 
@@ -50,6 +52,7 @@ public:
 	NPC npc;
 
 	void readConectedPlayerSnap(std::queue<uint8_t>& gameData) {
+		hostLevel = convertQueueToType<uint8_t>(gameData);
 		animation = convertQueueToType<uint32_t>(gameData);
 		animFrame = convertQueueToType<float>(gameData);
 		lastAnimFrame = convertQueueToType<float>(gameData);
@@ -73,6 +76,14 @@ public:
 		logOption_->LogMessage(LogLevel::Log_Debug, "RotY", rotation.y);
 		logOption_->LogMessage(LogLevel::Log_Debug, "Weapon", int(weapon));
 		logOption_->decreaseDepth();
+
+		if (hostLevel != hobbitProcessAnalyzer->readData<uint8_t>(0x00762B5C))
+		{
+			logOption_->setColor("RED");
+			logOption_->LogMessage(LogLevel::Log_Debug, "No Synchrone");
+			logOption_->resetColor();
+			return;
+		}
 
 		//set position, rotation, and animation
 		npc.setPositionX(position.x);
