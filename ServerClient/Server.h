@@ -1,17 +1,19 @@
-#ifndef SERVER_H
-#define SERVER_H
-#include <iostream>
+#pragma once
+
 #include <vector>
 #include <thread>
 #include <mutex>
 #include <map>
-#include <cstring>
-#include <cstdint>
 #include <string>
+#include <deque>
+#include <cstdint>
+#include <memory>
 
 #include "platform-specific.h"
 #include "Message.h"
 #include "../LogSystem/LogManager.h"
+#include "TLS.h"
+
 #define PORT 54000
 
 struct ClientHandler {
@@ -20,30 +22,45 @@ struct ClientHandler {
     std::string ipAddress;
     uint16_t port;
     std::thread thread;
+
+    // TLS handle
+    SSL* ssl = nullptr;
 };
 
 class Server {
-    LogOption::Ptr logOption_;
-
 public:
-    Server() : nextClientID(1), isRunning(true), logOption_(LogManager::Instance().CreateLogOption("SERVER")) {}
+    Server();
     ~Server() { stop(); }
 
-    void start();
+    bool start();
     void stop();
-    bool getIsRunning() { return isRunning; };
+
+    void processMessage(const BaseMessage& msg, ClientHandler* clientHandler);
+
+    bool getIsRunning() { return isRunning; }
+
     void broadcastMessage(const BaseMessage& msg, uint8_t excludeID = 0);
+    bool sendToClient(uint8_t clientID, const BaseMessage& msg);
+
+    // No custom enum: send a generic EVENT_MESSAGE to everyone
+    void notifyClients();
 
 private:
-    SOCKET listeningSocket;
+    LogOption::Ptr logOption_;
+    SOCKET listeningSocket = INVALID_SOCKET;
     std::vector<ClientHandler*> clients;
-    uint8_t nextClientID;
     std::mutex clientsMutex;
-    bool isRunning;
+    bool isRunning = false;
+    uint8_t nextID = 1;
+
+    TLSServer tls_;
 
     void acceptClients();
     void handleClient(ClientHandler* clientHandler);
-    void notifyClients();
-};
 
-#endif // SERVER_H
+    uint8_t allocateClientID() {
+        // Simple ID allocator (1..254)
+        if (nextID == 0 || nextID == 255) nextID = 1;
+        return nextID++;
+    }
+};

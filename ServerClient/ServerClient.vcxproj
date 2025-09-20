@@ -136,6 +136,7 @@
     <ClCompile Include="Message.cpp" />
     <ClCompile Include="platform-specific.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="TLS.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Client.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="Message.h" />
     <ClInclude Include="platform-specific.h" />
     <ClInclude Include="Server.h" />
+    <ClInclude Include="TLS.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

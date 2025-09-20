@@ -93,7 +93,7 @@ public:
 		bilboPosXPTR = hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR);
 		bilboAnimPTR = 0x8 + hobbitProcessAnalyzer->readData<uint32_t>(0x560 + hobbitProcessAnalyzer->readData<uint32_t>(X_POSITION_PTR));
 
-		//Enemies 
+		/*//Enemies 
 		enemies.clear();
 		logOption_->LogMessage(LogLevel::Log_Debug, "List Enemies");
 		logOption_->increaseDepth();
@@ -121,10 +121,11 @@ public:
 			logOption_->LogMessage(LogLevel::Log_Debug, "Address:", ptrInventory + 0x4 * item, "Value: ", hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * item));
 			inventory.push_back(std::make_pair(item, hobbitProcessAnalyzer->readData<float>(ptrInventory + 0x4 * item)));
 		}
-		logOption_->decreaseDepth();
+		logOption_->decreaseDepth();*/
 	}
 	void readProcessInventory(std::queue<uint8_t>& gameData)
 	{
+		/*
 		uint32_t numberChangeInventory = convertQueueToType<uint32_t>(gameData);
 		std::queue<std::pair<uint8_t, float>> readInventory;
 		for (int i = 0; i < numberChangeInventory; i++)
@@ -148,10 +149,10 @@ public:
 			hobbitProcessAnalyzer->writeData<float>(ptrInventory + 0x4 * readInventory.front().first, inventory.at(readInventory.front().first).second);
 			readInventory.pop();
 		}
-		logOption_->decreaseDepth();
+		logOption_->decreaseDepth();*/
 	}
 	void readProcessEnemiesHealth(std::queue<uint8_t>& gameData) {
-
+		/*
 		uint32_t numberHurtEnemies = convertQueueToType<uint32_t>(gameData);
 		for (int i = 0; i < numberHurtEnemies; ++i)
 		{
@@ -192,7 +193,7 @@ public:
 					}
 				}
 			}
-		}
+		}*/
 	}
 	void readConectedPlayerLevel(std::queue<uint8_t>& gameData)
 	{
@@ -201,8 +202,6 @@ public:
 		{
 			logOption_->LogMessage(LogLevel::Log_Debug, "Level Changed", "Before", level, "After", newLevel);
 			level = newLevel;
-			//changing level logic here
-			//[missing] will be implemented in the future
 		}
 		gameData.pop();
 	}
@@ -245,6 +244,8 @@ private:
 	}
 	BaseMessage writeEnemiesEvent()
 	{
+		return BaseMessage();
+		/*
 		logOption_->setColor("GREEN");
 		//sending the following message:
 		//label - Snap, 0 - reserve for size
@@ -312,9 +313,13 @@ private:
 			return BaseMessage();
 
 		}
+		*/
 	}
 	BaseMessage writeInventoryEvent()
 	{
+		return BaseMessage();
+		/*
+* 
 		logOption_->setColor("BLUE");
 		if (!EVENT_EYSN)
 			return BaseMessage(); // if not enabled return empty message
@@ -380,9 +385,12 @@ private:
 		else
 			logOption_->resetColor();
 		return BaseMessage();
+		*/
 	}
 	BaseMessage writeChangeLevelEvent()
 	{
+		return BaseMessage();
+		/*
 		if (!EVENT_EYSN)
 			return BaseMessage(); // if not enabled return empty message
 
@@ -416,7 +424,7 @@ private:
 			}
 			return msg;
 		}
-		return BaseMessage();
+		return BaseMessage()*/
 	}
 
 	void processData()
